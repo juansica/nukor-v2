@@ -240,11 +240,49 @@ const ChatArea = ({
               )
             })}
             {isTyping && (
-              <div className="max-w-[720px] mx-auto w-full">
-                <TypingIndicator />
-              </div>
-            )}
-            <div ref={messagesEndRef} className="h-8" />
+                <div className="max-w-[720px] mx-auto w-full">
+                  <TypingIndicator />
+                </div>
+              )}
+
+              {suggestedEntry && (
+                <div className="max-w-[760px] mx-auto w-full mt-6 px-4">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                        <Bookmark size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-indigo-900 text-sm mb-1 line-clamp-1">
+                          💾 Nukor detectó conocimiento nuevo
+                        </h3>
+                        <p className="text-gray-600 text-xs mb-4 line-clamp-2 italic">
+                          "{suggestedEntry.title}"
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            onClick={onSaveSuggestedEntry}
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-8 px-4 text-xs font-semibold shadow-sm"
+                          >
+                            Guardar en base de conocimiento
+                          </Button>
+                          <Button 
+                            onClick={onDiscardSuggestedEntry}
+                            variant="ghost" 
+                            size="sm"
+                            className="text-gray-500 hover:bg-white/50 h-8 px-3 text-xs"
+                          >
+                            Descartar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} className="h-8" />
           </div>
         )}
       </div>
