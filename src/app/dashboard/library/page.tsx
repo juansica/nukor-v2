@@ -21,6 +21,8 @@ import {
   Layers,
   ChevronLeft,
   Filter,
+  Inbox,
+  FolderOpen
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -255,11 +257,18 @@ function LibraryClient() {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Entry | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 350)
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  useEffect(() => {
+    const handleClick = () => setOpenDropdownId(null)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {
@@ -281,7 +290,7 @@ function LibraryClient() {
         setAreas(Array.isArray(aData.areas) ? aData.areas : [])
       }
 
-      if (areaId) {
+      if (areaId && areaId !== 'unclassified') {
         const cRes = await fetch(`/api/collections?areaId=${areaId}`)
         if (cRes.ok) {
           const cData = await cRes.json()
@@ -310,12 +319,17 @@ function LibraryClient() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const currentArea = useMemo(() => areas.find(a => a.id === areaId), [areas, areaId])
+  const currentArea = useMemo(() => {
+    if (areaId === 'unclassified') return { id: 'unclassified', name: 'Sin clasificar', description: null, color: '#9ca3af' } as Area
+    return areas.find(a => a.id === areaId)
+  }, [areas, areaId])
+
   const currentCollection = useMemo(() => collections.find(c => c.id === collectionId), [collections, collectionId])
 
   const filteredEntries = useMemo(() => {
     let result = entries
     if (collectionId) result = result.filter(e => e.collection_id === collectionId)
+    else if (areaId === 'unclassified') result = result.filter(e => !e.area_id)
     else if (areaId) result = result.filter(e => e.area_id === areaId)
 
     if (debouncedQuery) {
@@ -334,6 +348,17 @@ function LibraryClient() {
       toast.error('Error al eliminar')
     }
     setDeleteTarget(null)
+  }
+
+  const handleAssignArea = async (entryId: string, newAreaId: string) => {
+    setOpenDropdownId(null)
+    const { error } = await supabase.from('entries').update({ area_id: newAreaId, collection_id: null }).eq('id', entryId)
+    if (!error) {
+      toast.success('Área asignada')
+      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, area_id: newAreaId, collection_id: null } : e))
+    } else {
+      toast.error('Error al asignar')
+    }
   }
 
   return (
@@ -385,9 +410,8 @@ function LibraryClient() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {areas.map(area => (
                   <Link key={area.id} href={`/dashboard/library?area=${area.id}`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden" style={{ borderLeftColor: area.color || '#e2e8f0' }}>
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-start mb-4">
                       <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><Layers size={24} /></div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">Workspace</span>
                     </div>
                     <h3 className="text-lg font-bold text-gray-950 mb-2">{area.name}</h3>
                     <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">{area.description || 'Sin descripción'}</p>
@@ -397,10 +421,23 @@ function LibraryClient() {
                     </div>
                   </Link>
                 ))}
+                {/* ONBOARDING NOTE: Explain to new users that entries saved without
+                    creating areas first will appear in "Sin clasificar". They can
+                    create areas at any time and assign entries to them. */}
+                <Link href={`/dashboard/library?area=unclassified`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden" style={{ borderLeftColor: '#9ca3af' }}>
+                  <div className="flex items-start mb-4">
+                    <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-gray-100 transition-colors"><Inbox size={24} /></div>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-950 mb-2">Sin clasificar</h3>
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">Entradas sin un área asignada.</p>
+                  <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
+                    <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => !e.area_id).length} entradas</span>
+                  </div>
+                </Link>
               </div>
             )}
 
-            {areaId && !collectionId && (
+            {areaId && !collectionId && areaId !== 'unclassified' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {collections.length === 0 ? (
                   <div className="col-span-full py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
@@ -422,7 +459,7 @@ function LibraryClient() {
               </div>
             )}
 
-            {(collectionId || debouncedQuery) && (
+            {(collectionId || debouncedQuery || areaId === 'unclassified') && (
               <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
                 {filteredEntries.length === 0 ? (
                   <div className="p-20 text-center flex flex-col items-center">
@@ -448,7 +485,28 @@ function LibraryClient() {
                         <span>{formatDate(entry.created_at)}</span>
                       </div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(entry) }} className="p-2 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-600 md:opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={16}/></button>
+                    <div className="relative">
+                      <button onClick={(e) => { e.stopPropagation(); setOpenDropdownId(openDropdownId === entry.id ? null : entry.id) }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 md:opacity-0 group-hover:opacity-100 transition-all">
+                        <MoreHorizontal size={16}/>
+                      </button>
+                      {openDropdownId === entry.id && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden" onClick={e => e.stopPropagation()}>
+                          <div className="py-1 max-h-48 overflow-y-auto">
+                            <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Asignar área</div>
+                            {areas.map(a => (
+                              <button key={a.id} onClick={(e) => { e.stopPropagation(); handleAssignArea(entry.id, a.id) }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: a.color || '#ccc' }} />
+                                <span className="truncate">{a.name}</span>
+                              </button>
+                            ))}
+                            <div className="h-px bg-gray-100 my-1" />
+                            <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(entry); setOpenDropdownId(null) }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium">
+                              <Trash2 size={14} /> Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
