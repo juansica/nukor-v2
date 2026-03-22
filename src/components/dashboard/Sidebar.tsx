@@ -1,10 +1,9 @@
-'use client'
-
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { IConversation } from '@/types/chat'
 import SignOutButton from '@/components/auth/SignOutButton'
-import { Plus, Clock, BookOpen, Layers, ChevronDown, X } from 'lucide-react'
+import { Plus, Clock, BookOpen, Layers, ChevronDown, X, Check } from 'lucide-react'
 
 interface SidebarProps {
   conversations: IConversation[]
@@ -33,21 +32,45 @@ const Sidebar = ({
 }: SidebarProps) => {
   const initials = userName.slice(0, 2).toUpperCase()
   const pathname = usePathname()
+  const router = useRouter()
+
+  const [workspaceOpen, setWorkspaceOpen] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newWorkspaceName, setNewWorkspaceName] = useState('')
+  const workspaceRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (workspaceRef.current && !workspaceRef.current.contains(event.target as Node)) {
+        setWorkspaceOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleLogoClick = () => {
+    if (pathname === '/dashboard') {
+      router.refresh()
+    } else {
+      router.push('/dashboard')
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-950">
       {/* Header */}
       <div className="flex flex-col gap-4 p-5 flex-shrink-0 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-heading font-bold text-base tracking-tight text-gray-950"
+          <button
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 font-heading font-bold text-base tracking-tight text-gray-950 border-none bg-transparent p-0"
           >
             <span className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-black bg-indigo-600 text-white">
               N
             </span>
             Nukor
-          </Link>
+          </button>
           <button
             className="md:hidden p-1.5 rounded-md hover:bg-slate-50 transition-colors text-gray-500"
             onClick={onClose}
@@ -57,9 +80,34 @@ const Sidebar = ({
         </div>
 
         {/* Workspace selector */}
-        <div className="flex items-center justify-between cursor-pointer rounded-lg px-3 py-2 bg-white border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
-          <span className="text-sm font-medium text-gray-950">Mi workspace</span>
-          <ChevronDown size={16} className="text-gray-500" />
+        <div className="relative" ref={workspaceRef}>
+          <button
+            onClick={() => setWorkspaceOpen(!workspaceOpen)}
+            className="flex items-center justify-between w-full rounded-lg px-3 py-2 bg-white border border-gray-200 shadow-sm hover:border-gray-300 transition-colors"
+          >
+            <span className="text-sm font-medium text-gray-950">Mi workspace</span>
+            <ChevronDown size={16} className={`text-gray-500 transition-transform ${workspaceOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {workspaceOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+              <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600">
+                <div className="w-5 h-5 rounded bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
+                <span className="text-sm font-medium">Mi Workspace</span>
+                <Check className="w-4 h-4 ml-auto" />
+              </div>
+
+              <div className="border-t border-gray-100 mt-1 pt-1">
+                <button
+                  onClick={() => { setWorkspaceOpen(false); setShowCreateModal(true) }}
+                  className="flex items-center gap-2 px-3 py-2 w-full text-left text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Crear workspace
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -136,6 +184,45 @@ const Sidebar = ({
           </div>
         </div>
       </div>
+
+      {/* Create workspace modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-[100] animate-in fade-in duration-200">
+          <div 
+            className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 animate-in zoom-in-95 duration-200 border border-gray-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-950 mb-1 tracking-tight">Crear nuevo workspace</h3>
+            <p className="text-xs text-gray-500 mb-6">Nukor te ayuda a organizar tu conocimiento.</p>
+            <input
+              type="text"
+              placeholder="Nombre del workspace"
+              value={newWorkspaceName}
+              onChange={(e) => setNewWorkspaceName(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 mb-6 transition-all bg-slate-50 hover:bg-white"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => { setShowCreateModal(false); setNewWorkspaceName('') }}
+                className="px-4 py-2 text-sm font-medium text-gray-500 hover:bg-slate-50 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newWorkspaceName.trim()) return
+                  setShowCreateModal(false)
+                  setNewWorkspaceName('')
+                }}
+                className="px-6 py-2 text-sm font-bold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-all active:scale-[0.98]"
+              >
+                Crear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
