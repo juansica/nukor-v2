@@ -94,6 +94,8 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
 ]
 
 async function executeTool(name: string, args: any, workspaceId: string, userId: string) {
+  const effectiveId = workspaceId || '00000000-0000-0000-0000-000000000001'
+  
   const supabase = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -101,10 +103,12 @@ async function executeTool(name: string, args: any, workspaceId: string, userId:
 
   switch (name) {
     case 'get_areas': {
-      const { data } = await supabase
+      console.log('get_areas called with effectiveId:', effectiveId)
+      const { data, error } = await supabase
         .from('areas')
         .select('id, name, description, color')
-        .eq('workspace_id', workspaceId)
+        .eq('workspace_id', effectiveId)
+      console.log('get_areas result:', data, 'error:', error)
       return JSON.stringify(data || [])
     }
     case 'get_collections': {
@@ -130,7 +134,7 @@ async function executeTool(name: string, args: any, workspaceId: string, userId:
           content: args.content,
           collection_id: args.collection_id ?? null,
           area_id: args.area_id ?? null,
-          workspace_id: workspaceId,
+          workspace_id: effectiveId,
           created_by: userId,
           is_published: true,
         })
@@ -174,7 +178,7 @@ async function executeTool(name: string, args: any, workspaceId: string, userId:
         .insert({
           name: args.name,
           area_id: args.area_id,
-          workspace_id: workspaceId,
+          workspace_id: effectiveId,
           description: args.description ?? null,
           created_by: userId,
         })
@@ -197,6 +201,7 @@ export async function POST(request: NextRequest) {
 
     const { messages, workspaceId, conversationId: existingConversationId } = await request.json()
     const effectiveWorkspaceId = workspaceId || '00000000-0000-0000-0000-000000000001'
+    console.log('[Nukor API] effectiveWorkspaceId:', effectiveWorkspaceId)
 
     if (!messages) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 })
