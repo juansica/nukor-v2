@@ -440,7 +440,7 @@ function LibraryClient() {
                     <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">{area.description || 'Sin descripción'}</p>
                     <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
                       <span className="flex items-center gap-1"><Grid size={14}/> {area.collections?.length || 0} colecciones</span>
-                      <span className="flex items-center gap-1"><BookOpen size={14}/> {area.entries?.length || 0} entradas</span>
+                      <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => e.area_id === area.id).length} entradas</span>
                     </div>
                   </Link>
                 ))}
