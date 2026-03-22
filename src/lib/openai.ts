@@ -28,9 +28,12 @@ export type StreamEvent =
  * Yields StreamEvent objects — callers should handle each event type.
  */
 export async function* streamChat(
-  workspaceId: string,
+  _workspaceId: string, // Ignored as per user request to test with hardcoded ID
   messages: ChatMessage[]
 ): AsyncGenerator<StreamEvent> {
+  const workspaceId = '00000000-0000-0000-0000-000000000001'
+  console.log('Sending to /api/chat:', { messages, workspaceId })
+
   let response: Response
   try {
     response = await fetch('/api/chat', {
@@ -42,12 +45,14 @@ export async function* streamChat(
       body: JSON.stringify({ workspaceId, messages }),
     })
   } catch (err) {
+    console.error('Fetch error:', err)
     yield { type: 'error', error: `Network error: ${String(err)}` }
     return
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => `HTTP ${response.status}`)
+    console.error('Chat error:', response.status, text)
     yield { type: 'error', error: text }
     return
   }
@@ -61,34 +66,28 @@ export async function* streamChat(
     if (done) break
 
     buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
 
-    // SSE messages are delimited by double newlines
-    const parts = buffer.split('\n\n')
-    buffer = parts.pop() ?? ''
-
-    for (const part of parts) {
-      const line = part.trim()
-      if (!line.startsWith('data: ')) continue
-      const json = line.slice(6).trim()
-      if (!json) continue
+    for (const line of lines) {
+      const trimmedLine = line.trim()
+      if (!trimmedLine.startsWith('data: ')) continue
+      const data = trimmedLine.slice(6).trim()
+      
+      if (data === '[DONE]') break
 
       try {
-        const event = JSON.parse(json)
-        if (event.type === 'token') {
-          yield { type: 'token', content: event.content as string }
-        } else if (event.type === 'done') {
-          yield {
-            type: 'done',
-            usage: {
-              inputTokens: event.inputTokens as number,
-              outputTokens: event.outputTokens as number,
-            },
-          }
-        } else if (event.type === 'error') {
-          yield { type: 'error', error: event.error as string }
+        const parsed = JSON.parse(data)
+        if (parsed.text) {
+          yield { type: 'token', content: parsed.text }
+        } else if (parsed.type === 'token') {
+          // Compatibility with existing route response format
+          yield { type: 'token', content: parsed.content }
+        } else if (parsed.type === 'error') {
+          yield { type: 'error', error: parsed.error }
         }
-      } catch {
-        // Malformed SSE line — skip silently
+      } catch (e) {
+        // Skip malformed JSON
       }
     }
   }
