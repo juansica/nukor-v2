@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const { data: areas, error } = await supabaseAdmin
       .from('areas')
-      .select('*')
+      .select('*, collections(id), entries(id)')
       .eq('workspace_id', '00000000-0000-0000-0000-000000000001')
       .order('created_at', { ascending: false })
 
