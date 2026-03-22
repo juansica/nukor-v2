@@ -22,7 +22,8 @@ import {
   ChevronLeft,
   Filter,
   Inbox,
-  FolderOpen
+  FolderOpen,
+  ArrowLeft
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -386,28 +387,42 @@ function LibraryClient() {
         <main className="flex-1 overflow-y-auto p-8">
           <div className="max-w-5xl mx-auto">
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 bg-white self-start px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm overflow-hidden truncate">
-              <Link href="/dashboard/library" className="hover:text-indigo-600 font-medium">Base de conocimiento</Link>
+            <div className="flex items-center gap-3 mb-6">
               {areaId && (
-                <>
-                  <ChevronRight size={14} className="flex-shrink-0" />
-                  <Link href={`/dashboard/library?area=${areaId}`} className={`hover:text-indigo-600 font-medium truncate ${!collectionId ? 'text-indigo-600' : ''}`}>{currentArea?.name || 'Área'}</Link>
-                </>
+                <button onClick={() => router.back()} className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500 transition-colors shadow-sm">
+                  <ArrowLeft size={16} />
+                </button>
               )}
-              {collectionId && (
-                <>
-                  <ChevronRight size={14} className="flex-shrink-0" />
-                  <span className="text-indigo-600 font-semibold truncate">{currentCollection?.name || 'Colección'}</span>
-                </>
-              )}
-            </nav>
+              <nav className="flex items-center gap-2 text-sm text-gray-500 bg-white self-start px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm overflow-hidden truncate">
+                <Link href="/dashboard/library" className={`hover:text-indigo-600 font-medium ${!areaId ? 'text-indigo-600' : ''}`}>Base de conocimiento</Link>
+                {areaId && (
+                  <>
+                    <ChevronRight size={14} className="flex-shrink-0" />
+                    <Link href={`/dashboard/library?area=${areaId}`} className={`hover:text-indigo-600 font-medium truncate ${!collectionId ? 'text-indigo-600' : ''}`}>{currentArea?.name || 'Área'}</Link>
+                  </>
+                )}
+                {collectionId && (
+                  <>
+                    <ChevronRight size={14} className="flex-shrink-0" />
+                    <span className="text-indigo-600 font-semibold truncate">{currentCollection?.name || 'Colección'}</span>
+                  </>
+                )}
+              </nav>
+            </div>
 
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1,2,3].map(i => <div key={i} className="h-48 bg-white/50 animate-pulse rounded-2xl border border-gray-100" />)}
               </div>
             ) : !areaId && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <>
+                <div className="mb-6 px-1">
+                  <p className="text-sm font-medium text-gray-500">
+                    Las áreas representan los departamentos de tu empresa.<br />
+                    Dentro de cada área puedes crear colecciones para organizar el conocimiento por temas.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {areas.map(area => (
                   <Link key={area.id} href={`/dashboard/library?area=${area.id}`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden" style={{ borderLeftColor: area.color || '#e2e8f0' }}>
                     <div className="flex items-start mb-4">
@@ -435,18 +450,26 @@ function LibraryClient() {
                   </div>
                 </Link>
               </div>
+              </>
             )}
 
             {areaId && !collectionId && areaId !== 'unclassified' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {collections.length === 0 ? (
-                  <div className="col-span-full py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 mb-4"><Layers size={32} /></div>
-                    <p className="text-lg font-bold text-gray-900 mb-1">Esta área no tiene colecciones aún</p>
-                    <p className="text-sm text-gray-500 mb-6">Crea una para empezar a organizar tu conocimiento.</p>
-                    <button onClick={() => setShowCollModal(true)} className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Nueva colección</button>
-                  </div>
-                ) : collections.map(coll => (
+              <>
+                <div className="mb-6 px-1">
+                  <p className="text-sm font-medium text-gray-500">
+                    Las colecciones agrupan entradas relacionadas dentro de un área.<br />
+                    Crea colecciones para organizar el conocimiento por proceso, proyecto o tema.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {collections.length === 0 ? (
+                    <div className="col-span-full py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 mb-4"><FolderOpen size={32} /></div>
+                      <p className="text-lg font-bold text-gray-900 mb-1">Esta área no tiene colecciones aún</p>
+                      <p className="text-sm text-gray-500 mb-6 max-w-md">Las colecciones te permiten organizar el conocimiento por temas.<br/>Por ejemplo: "Proceso de ventas", "Políticas de RRHH", "Manual técnico"</p>
+                      <button onClick={() => setShowCollModal(true)} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors">+ Crear primera colección</button>
+                    </div>
+                  ) : collections.map(coll => (
                   <Link key={coll.id} href={`/dashboard/library?area=${areaId}&collection=${coll.id}`} className="group bg-white p-6 rounded-2xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all">
                     <div className="p-2 w-fit rounded-lg bg-gray-50 text-gray-400 mb-4 font-bold group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><Grid size={20} /></div>
                     <h3 className="text-base font-bold text-gray-950 mb-1">{coll.name}</h3>
@@ -457,16 +480,32 @@ function LibraryClient() {
                   </Link>
                 ))}
               </div>
+              </>
             )}
 
             {(collectionId || debouncedQuery || areaId === 'unclassified') && (
               <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
                 {filteredEntries.length === 0 ? (
-                  <div className="p-20 text-center flex flex-col items-center">
-                    <Search size={40} className="text-gray-200 mb-4" />
-                    <p className="text-gray-950 font-bold">No se encontraron entradas</p>
-                    <p className="text-gray-500 text-sm font-medium">Intenta con otros términos o crea una nueva.</p>
-                  </div>
+                  debouncedQuery ? (
+                    <div className="p-20 text-center flex flex-col items-center">
+                      <Search size={40} className="text-gray-200 mb-4" />
+                      <p className="text-lg font-bold text-gray-950 mb-2">No se encontraron resultados</p>
+                      <p className="text-sm font-medium text-gray-500">Intenta con otros términos.</p>
+                    </div>
+                  ) : collectionId ? (
+                    <div className="p-20 text-center flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 mb-4"><BookOpen size={32} /></div>
+                      <p className="text-lg font-bold text-gray-950 mb-2">Esta colección está vacía</p>
+                      <p className="text-sm font-medium text-gray-500 mb-6 max-w-md">Ve al chat y cuando Nukor detecte conocimiento nuevo,<br/>podrás guardarlo directamente aquí.</p>
+                      <Link href="/dashboard" className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-sm hover:bg-indigo-700 transition-colors">Ir al chat</Link>
+                    </div>
+                  ) : (
+                    <div className="p-20 text-center flex flex-col items-center">
+                      <BookOpen size={40} className="text-gray-200 mb-4" />
+                      <p className="text-lg font-bold text-gray-950 mb-2">No hay entradas</p>
+                      <p className="text-sm font-medium text-gray-500">Aún no tienes entradas aquí.</p>
+                    </div>
+                  )
                 ) : filteredEntries.map(entry => (
                   <div key={entry.id} onClick={() => setSelectedEntry(entry)} className="group flex items-start gap-4 px-6 py-5 hover:bg-gray-50 transition-all cursor-pointer">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><BookOpen size={18} /></div>
