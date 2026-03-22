@@ -332,12 +332,14 @@ Tu trabajo es detectar la intención del usuario en cada mensaje:
             })
 
             const assistantMessage = response.choices[0].message
-            conversationMessages.push(assistantMessage)
 
-            // If no tool calls — break the loop and stream final text
+            // If no tool calls — break WITHOUT pushing, so finalStream generates a fresh response
             if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
               break
             }
+
+            // Only push assistant message when it has tool calls (tool results must follow)
+            conversationMessages.push(assistantMessage)
 
             // Execute tool calls in this iteration
             const toolNames: string[] = []

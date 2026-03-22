@@ -65,7 +65,15 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     try {
       const res = await fetch('/api/conversations')
       const data = await res.json()
-      setConversations(data.conversations || [])
+      const fetched: IConversation[] = data.conversations || []
+      // Merge: preserve in-memory messages so in-flight streaming isn't wiped
+      setConversations(prev => {
+        const prevMap = new Map(prev.map(c => [c.id, c]))
+        return fetched.map(conv => ({
+          ...conv,
+          messages: prevMap.get(conv.id)?.messages || [],
+        }))
+      })
     } catch (err) {
       console.error('Failed to fetch conversations:', err)
     }
@@ -85,11 +93,12 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     try {
       const res = await fetch(`/api/conversations/${id}`)
       const data = await res.json()
-      
-      // Update local state without creating duplicates
-      setConversations(prev => prev.map(c => 
-        c.id === id ? { ...c, messages: data.messages || [] } : c
-      ))
+      const messages: IMessage[] = data.messages || []
+      // Don't overwrite in-flight streaming messages with an empty DB response
+      setConversations(prev => prev.map(c => {
+        if (c.id !== id) return c
+        return { ...c, messages: messages.length > 0 ? messages : (c.messages || []) }
+      }))
     } catch (err) {
       console.error('Failed to load conversation:', err)
     }
@@ -123,6 +132,8 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     }
 
     const capturedId = convId
+    // Tracks the real server-assigned ID once it arrives (may differ from temp UUID for new convs)
+    let effectiveConvId = capturedId
 
     const userMsg: IMessage = {
       id: crypto.randomUUID(),
@@ -166,14 +177,14 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     }, ...prev])
 
     try {
-      for await (const event of streamChat(currentWorkspaceId, history, capturedId)) {
+      for await (const event of streamChat(currentWorkspaceId, history, isNew ? null : capturedId)) {
         if (event.type === 'error') {
           setIsThinking(false)
           if (!gotFirstToken) {
             setIsTyping(false)
             setConversations((prev) =>
               prev.map((c) =>
-                c.id === capturedId
+                c.id === effectiveConvId
                   ? {
                       ...c,
                       messages: [
@@ -206,12 +217,14 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
         }
 
         if (event.type === 'conversation') {
-          if (!capturedId) {
-            convId = event.id
+          if (isNew) {
+            effectiveConvId = event.id
+            // Rename the temp-UUID conversation to the real server-assigned ID
+            setConversations(prev =>
+              prev.map(c => (c.id === capturedId ? { ...c, id: event.id } : c))
+            )
             setActiveConversationId(event.id)
-            // Replace the temporary UUID in history if needed or just sync
             router.push(`/dashboard?id=${event.id}`)
-            fetchConversations() // Refresh sidebar to show the new conversation
           }
           continue
         }
@@ -240,10 +253,10 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
             setIsTyping(false)
             setIsThinking(false)
             setThinkingSteps(prev => prev.map(s => ({ ...s, status: 'done' })))
-            
+
             setConversations((prev) =>
               prev.map((c) =>
-                c.id === capturedId
+                c.id === effectiveConvId
                   ? {
                       ...c,
                       messages: [
@@ -258,7 +271,7 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           fullContent += event.content
           setConversations((prev) =>
             prev.map((c) =>
-              c.id === capturedId
+              c.id === effectiveConvId
                 ? {
                     ...c,
                     messages: c.messages.map((m) =>
@@ -293,7 +306,7 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           // Update messages with cleaned content
           setConversations((prev) =>
             prev.map((c) =>
-              c.id === capturedId
+              c.id === effectiveConvId
                 ? {
                     ...c,
                     messages: c.messages.map((m) =>
