@@ -216,7 +216,10 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
       if (jsonMatch) {
         try {
           const saveData = JSON.parse(jsonMatch[0])
-          const cleanedContent = fullContent.replace(jsonMatch[0], '').trim()
+          const cleanedContent = fullContent
+            .replace(/```json[\s\S]*?```/g, '')
+            .replace(/\{"intent":"save"[\s\S]*?\}/g, '')
+            .trim()
           
           // Update messages with cleaned content
           setConversations((prev) =>

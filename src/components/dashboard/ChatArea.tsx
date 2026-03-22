@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
-import { Bookmark, Menu } from 'lucide-react'
+import { Plus, Send, Menu, Sparkles, BookmarkPlus, Check, X, ArrowUp } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 
 const SUGGESTIONS = [
   '¿Cuál es nuestro proceso de onboarding?',
@@ -204,115 +205,97 @@ const ChatArea = ({
         ) : (
           <div className="flex flex-col gap-6 px-6">
             {conversation.messages.map((msg, idx) => {
+              const isUser = msg.role === 'user'
               const isLastMsg = idx === conversation.messages.length - 1
               const showCursor = isStreaming && isLastMsg && msg.role === 'assistant'
               return (
-                <div
-                  key={msg.id}
-                  className={`flex items-end gap-3 max-w-[760px] mx-auto w-full mt-2 ${
-                    msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                  }`}
-                >
-                  {msg.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black flex-shrink-0 self-start mt-1 bg-indigo-600 text-white shadow-sm">
-                      N
-                    </div>
-                  )}
+                <div key={msg.id}>
+                  <div
+                    className={`flex items-end gap-3 max-w-[760px] mx-auto w-full mt-2 ${
+                      isUser ? 'flex-row-reverse' : 'flex-row'
+                    }`}
+                  >
+                    {!isUser && (
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black flex-shrink-0 self-start mt-1 bg-indigo-600 text-white shadow-sm">
+                        N
+                      </div>
+                    )}
 
-                  <div className={`group relative ${msg.role === 'user' ? 'max-w-[75%]' : 'flex-1 min-w-0'}`}>
+                    {/* Message content */}
                     <div
-                      className={`rounded-2xl px-5 py-3.5 text-sm leading-relaxed whitespace-pre-wrap shadow-sm ${
-                        msg.role === 'user'
-                          ? 'bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-br-sm font-medium'
-                          : 'bg-white border border-gray-200 text-gray-950 rounded-bl-sm'
+                      className={`flex-1 min-w-0 flex flex-col ${
+                        isUser ? 'items-end' : 'items-start'
                       }`}
                     >
-                      {msg.role === 'assistant'
-                        ? parseMessageContent(msg.content).mainContent
-                        : msg.content}
-                      {showCursor && (
-                        <span className="inline-block w-[2px] h-[1em] ml-0.5 align-middle animate-pulse bg-indigo-600" />
-                      )}
-                    </div>
-
-                    {msg.role === 'assistant' &&
-                      parseMessageContent(msg.content).sources.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2 ml-1">
-                          {parseMessageContent(msg.content).sources.map((source, i) => (
-                            <span
-                              key={i}
-                              className="text-xs font-medium tracking-tight px-3 py-1 rounded-md bg-background-tertiary text-text-muted border border-border-default shadow-sm"
-                            >
-                              {source}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                    {msg.role === 'assistant' && (
-                      <button
-                        onClick={() => handleSaveClick(msg.content)}
-                        className="absolute -bottom-8 left-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all opacity-0 group-hover:opacity-100 bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 shadow-sm"
+                      <div
+                        className={`
+                          px-5 py-3.5 rounded-2xl text-sm leading-relaxed max-w-full
+                          ${
+                            isUser
+                              ? 'bg-indigo-600 text-white font-medium border border-indigo-500 shadow-sm'
+                              : 'bg-white text-gray-900 border border-border-default shadow-sm'
+                          }
+                        `}
                       >
-                        <Bookmark size={12} />
-                        Guardar como entrada
-                      </button>
-                    )}
+                        {isUser ? (
+                          msg.content
+                        ) : (
+                          <div className="prose prose-sm max-w-none text-gray-700 prose-p:leading-relaxed prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-100 prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+                            <ReactMarkdown>
+                              {parseMessageContent(msg.content).mainContent}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                        {showCursor && (
+                          <span className="inline-block w-[2px] h-[1em] ml-0.5 align-middle animate-pulse bg-indigo-600" />
+                        )}
+                      </div>
+
+                      {msg.role === 'assistant' &&
+                        parseMessageContent(msg.content).sources.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2 ml-1">
+                            {parseMessageContent(msg.content).sources.map((source, i) => (
+                              <span
+                                key={i}
+                                className="text-xs font-medium tracking-tight px-3 py-1 rounded-md bg-background-tertiary text-text-muted border border-border-default shadow-sm"
+                              >
+                                {source}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
                   </div>
+
+                  {/* Save Detection Banner (Directly below last AI message) */}
+                  {!isUser && isLastMsg && suggestedEntry && (
+                    <div className="max-w-[760px] mx-auto w-full mt-2 mb-4 px-10">
+                      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl animate-in slide-in-from-top-2 duration-300">
+                        <BookmarkPlus className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-indigo-700">Nukor detectó conocimiento nuevo</p>
+                          <p className="text-xs text-indigo-500 truncate">"{suggestedEntry?.title}"</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={onSaveSuggestedEntry}
+                            className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors shadow-sm"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            onClick={onDiscardSuggestedEntry}
+                            className="text-xs text-indigo-400 hover:text-indigo-600 flex-shrink-0 p-1"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
-            {isTyping && !isThinking && (
-                <div className="max-w-[720px] mx-auto w-full">
-                  <TypingIndicator />
-                </div>
-              )}
-
-              {(isThinking || thinkingSteps.some(s => s.status === 'active')) && (
-                <div className="flex items-start gap-3 max-w-[760px] mx-auto w-full mt-2 transition-opacity duration-300">
-                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black flex-shrink-0 self-start mt-1 bg-indigo-600 text-white shadow-sm">
-                    N
-                  </div>
-                  <ThinkingLog steps={thinkingSteps} />
-                </div>
-              )}
-
-              {suggestedEntry && (
-                <div className="max-w-[760px] mx-auto w-full mt-6 px-4">
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
-                        <Bookmark size={20} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-indigo-900 text-sm mb-1 line-clamp-1">
-                          💾 Nukor detectó conocimiento nuevo
-                        </h3>
-                        <p className="text-gray-600 text-xs mb-4 line-clamp-2 italic">
-                          "{suggestedEntry.title}"
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            onClick={onSaveSuggestedEntry}
-                            size="sm"
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-8 px-4 text-xs font-semibold shadow-sm"
-                          >
-                            Guardar en base de conocimiento
-                          </Button>
-                          <Button 
-                            onClick={onDiscardSuggestedEntry}
-                            variant="ghost" 
-                            size="sm"
-                            className="text-gray-500 hover:bg-white/50 h-8 px-3 text-xs"
-                          >
-                            Descartar
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div ref={messagesEndRef} className="h-8" />
           </div>
