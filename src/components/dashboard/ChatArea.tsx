@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Send, Menu, Sparkles, BookmarkPlus, Check, X, ArrowUp, Activity } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import type { LogEntry } from '@/components/dashboard/DashboardClient'
+import type { LogEntry, LogGroup } from '@/components/dashboard/DashboardClient'
 
 const SUGGESTIONS = [
   '¿Cuál es nuestro proceso de onboarding?',
@@ -50,7 +50,7 @@ interface ChatAreaProps {
   onDiscardSuggestedEntry?: () => void
   thinkingSteps?: { id: string, text: string, status: 'active' | 'done' }[]
   isThinking?: boolean
-  logs?: LogEntry[]
+  logGroups?: LogGroup[]
   onClearLogs?: () => void
 }
 
@@ -146,6 +146,48 @@ function LogEntryView({ log }: { log: LogEntry }) {
   )
 }
 
+function LogGroupView({ group }: { group: LogGroup }) {
+  const [expanded, setExpanded] = useState(group.expanded || false)
+
+  const stepsCount = group.steps.length
+  const ragCount = group.steps.filter(s => s.type === 'rag_search' || s.type === 'rag_result').length
+  const toolsCount = group.steps.filter(s => s.type === 'tool_call' || s.type === 'tool_result').length
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-3 py-2 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+      >
+        <div className="flex-1 min-w-0 pr-3">
+          <p className="text-sm font-medium text-gray-900 truncate">
+            <span className="text-purple-500 mr-2">🟣</span>
+            "{group.userMessage.length > 35 ? group.userMessage.slice(0, 35) + '...' : group.userMessage}"
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {stepsCount} pasos · RAG: {ragCount} · Tools: {toolsCount}
+          </p>
+        </div>
+        <div className="flex flex-col items-end flex-shrink-0">
+          <span className="text-[10px] text-gray-400 mb-1">{new Date(group.timestamp).toLocaleTimeString('es-CL')}</span>
+          <span className="text-xs text-gray-400">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-3 py-3 border-t border-gray-100 space-y-3 bg-white">
+          {group.steps.map(step => (
+            <LogEntryView key={step.id} log={step} />
+          ))}
+          {group.steps.length === 0 && (
+            <p className="text-xs text-center text-gray-400">Procesando...</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ChatArea = ({
   conversation,
   isTyping,
@@ -160,7 +202,7 @@ const ChatArea = ({
   onDiscardSuggestedEntry,
   thinkingSteps = [],
   isThinking = false,
-  logs = [],
+  logGroups = [],
   onClearLogs,
 }: ChatAreaProps) => {
   const supabase = createClient()
@@ -172,14 +214,30 @@ const ChatArea = ({
 
   const [logsOpen, setLogsOpen] = useState(false)
   const [hasNewLogs, setHasNewLogs] = useState(false)
-  const prevLogsLengthRef = useRef(logs?.length || 0)
+  const prevEventsCountRef = useRef(0)
 
+  // Use flat count of events to detect new logs
   useEffect(() => {
-    if ((logs?.length || 0) > prevLogsLengthRef.current && !logsOpen) {
+    const currentCount = logGroups?.reduce((acc, g) => acc + g.steps.length, 0) || 0
+    if (currentCount > prevEventsCountRef.current && !logsOpen) {
       setHasNewLogs(true)
     }
-    prevLogsLengthRef.current = logs?.length || 0
-  }, [logs?.length, logsOpen])
+    prevEventsCountRef.current = currentCount
+  }, [logGroups, logsOpen])
+
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
+        e.preventDefault()
+        setLogsOpen(prev => {
+          if (!prev) setHasNewLogs(false)
+          return !prev
+        })
+      }
+    }
+    window.addEventListener('keydown', handleKeydown)
+    return () => window.removeEventListener('keydown', handleKeydown)
+  }, [])
 
   const handleToggleLogs = () => {
     setLogsOpen(!logsOpen)
@@ -243,8 +301,11 @@ const ChatArea = ({
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white shadow-sm rounded-xl m-2 md:m-3 border border-gray-200 overflow-hidden relative">
-      {/* Top bar */}
+    <div className="flex h-full w-full relative overflow-hidden bg-background-secondary">
+      {/* Main chat box that squeezes its width smoothly */}
+      <div className={`flex-1 flex flex-col min-w-0 bg-white shadow-sm rounded-xl m-2 md:m-3 border border-gray-200 overflow-hidden relative transition-all duration-300 ${logsOpen ? 'mr-[330px]' : ''}`}>
+        
+        {/* Top bar */}
       <div className="flex-shrink-0 flex items-center justify-between h-14 px-4 border-b border-gray-200 bg-white">
         <div className="flex flex-row items-center">
           <button
@@ -400,91 +461,97 @@ const ChatArea = ({
       {/* Input bar */}
       <ChatInput onSend={onSendMessage} disabled={isTyping || isStreaming} />
 
-      {/* Logs Panel */}
-      {logsOpen && (
-        <div className="absolute right-0 top-14 bottom-0 w-80 bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col animate-in slide-in-from-right-full duration-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-500" />
-              <span className="font-semibold text-sm text-gray-900">Actividad del asistente</span>
-            </div>
-            <button onClick={() => setLogsOpen(false)} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
+        {/* Input bar */}
+        <ChatInput onSend={onSendMessage} disabled={isTyping || isStreaming} />
 
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {(!logs || logs.length === 0) ? (
-              <p className="text-sm text-gray-400 text-center mt-8 px-4">
-                Los logs de actividad aparecerán aquí durante la conversación.
-              </p>
-            ) : (
-              logs.map((log) => <LogEntryView key={log.id} log={log} />)
-            )}
-          </div>
+        {/* Save Entry Modal */}
+        <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+          <DialogContent className="sm:max-w-[500px] bg-white border-gray-200 shadow-lg text-gray-950 p-6 rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-bold tracking-tight text-xl text-gray-950">Save as Knowledge Entry</DialogTitle>
+            </DialogHeader>
 
-          {logs && logs.length > 0 && (
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
-              <button
-                onClick={onClearLogs}
-                className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors w-full text-center"
-              >
-                Limpiar logs
-              </button>
-            </div>
+            <form onSubmit={submitEntry} className="space-y-5 mt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Title</label>
+                <Input
+                  value={entryTitle}
+                  onChange={(e) => setEntryTitle(e.target.value)}
+                  placeholder="Entry title..."
+                  required
+                  className="bg-white border-gray-200 text-gray-950 focus-visible:ring-indigo-600 rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Content</label>
+                <Textarea
+                  value={entryContent}
+                  onChange={(e) => setEntryContent(e.target.value)}
+                  placeholder="Entry content..."
+                  required
+                  className="min-h-[160px] bg-white border-gray-200 text-gray-950 focus-visible:ring-indigo-600 rounded-lg leading-relaxed shadow-sm"
+                />
+              </div>
+              <DialogFooter className="mt-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCloseModal}
+                  disabled={isSaving}
+                  className="text-gray-500 hover:bg-slate-50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-indigo-600 text-white font-semibold hover:bg-indigo-700 rounded-lg shadow-sm"
+                >
+                  {isSaving ? 'Saving...' : 'Save Entry'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Logs Panel - floats in from the right edge of container */}
+      <div className={`
+        absolute right-0 top-0 h-full w-80 bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col
+        transition-transform duration-300
+        ${logsOpen ? 'translate-x-0' : 'translate-x-full'}
+      `}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-indigo-500" />
+            <span className="font-semibold text-sm text-gray-900">Actividad del asistente</span>
+          </div>
+          <button onClick={() => setLogsOpen(false)} className="p-1 hover:bg-gray-100 rounded-md transition-colors">
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          {(!logGroups || logGroups.length === 0) ? (
+            <p className="text-sm text-gray-400 text-center mt-8 px-4">
+              Los logs de actividad aparecerán aquí durante la conversación.
+            </p>
+          ) : (
+            logGroups.map((group) => <LogGroupView key={group.id} group={group} />)
           )}
         </div>
-      )}
 
-      {/* Save Entry Modal */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="sm:max-w-[500px] bg-white border-gray-200 shadow-lg text-gray-950 p-6 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-bold tracking-tight text-xl text-gray-950">Save as Knowledge Entry</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={submitEntry} className="space-y-5 mt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Title</label>
-              <Input
-                value={entryTitle}
-                onChange={(e) => setEntryTitle(e.target.value)}
-                placeholder="Entry title..."
-                required
-                className="bg-white border-gray-200 text-gray-950 focus-visible:ring-indigo-600 rounded-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Content</label>
-              <Textarea
-                value={entryContent}
-                onChange={(e) => setEntryContent(e.target.value)}
-                placeholder="Entry content..."
-                required
-                className="min-h-[160px] bg-white border-gray-200 text-gray-950 focus-visible:ring-indigo-600 rounded-lg leading-relaxed shadow-sm"
-              />
-            </div>
-            <DialogFooter className="mt-6">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleCloseModal}
-                disabled={isSaving}
-                className="text-gray-500 hover:bg-slate-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="bg-indigo-600 text-white font-semibold hover:bg-indigo-700 rounded-lg shadow-sm"
-              >
-                {isSaving ? 'Saving...' : 'Save Entry'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        {logGroups && logGroups.length > 0 && (
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+            <button
+              onClick={onClearLogs}
+              className="text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors w-full text-center"
+            >
+              Limpiar logs
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

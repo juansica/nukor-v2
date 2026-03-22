@@ -18,6 +18,14 @@ export interface LogEntry {
   duration?: number
 }
 
+export interface LogGroup {
+  id: string
+  timestamp: Date
+  userMessage: string
+  steps: LogEntry[]
+  expanded: boolean
+}
+
 interface DashboardClientProps {
   userId: string
   userName: string
@@ -43,7 +51,7 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
   const [isStreaming, setIsStreaming] = useState(false)
   const [thinkingSteps, setThinkingSteps] = useState<{ id: string, text: string, status: 'active' | 'done' }[]>([])
   const [isThinking, setIsThinking] = useState(false)
-  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [logGroups, setLogGroups] = useState<LogGroup[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true
   )
@@ -155,6 +163,15 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     setThinkingSteps([])
     setIsThinking(true)
 
+    // Create a new LogGroup for this turn
+    setLogGroups(prev => [{
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      userMessage: content,
+      steps: [],
+      expanded: false
+    }, ...prev])
+
     try {
       for await (const event of streamChat(currentWorkspaceId, history)) {
         if (event.type === 'error') {
@@ -184,11 +201,14 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
         }
 
         if (event.type === 'log') {
-          setLogs(prev => [{
-            ...event.log,
-            id: Date.now().toString() + Math.random().toString(36).substring(7),
-            timestamp: new Date()
-          }, ...prev])
+          setLogGroups(prev => prev.map((group, i) => i === 0 ? {
+            ...group,
+            steps: [...group.steps, {
+              ...event.log,
+              id: Date.now().toString() + Math.random().toString(36).substring(7),
+              timestamp: new Date()
+            }]
+          } : group))
           continue
         }
 
@@ -198,12 +218,15 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
             { id: Date.now().toString(), text: event.content, status: 'active' }
           ])
           // Auto convert text steps into thinking logs
-          setLogs(prev => [{
-            type: 'thinking',
-            title: event.content,
-            id: Date.now().toString() + Math.random().toString(36).substring(7),
-            timestamp: new Date()
-          }, ...prev])
+          setLogGroups(prev => prev.map((group, i) => i === 0 ? {
+            ...group,
+            steps: [...group.steps, {
+              type: 'thinking',
+              title: event.content,
+              id: Date.now().toString() + Math.random().toString(36).substring(7),
+              timestamp: new Date()
+            }]
+          } : group))
           continue
         }
 
@@ -321,7 +344,7 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
 
   const handleNewConversation = () => {
     setActiveConversationId(null)
-    setLogs([])
+    setLogGroups([])
     if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false)
   }
 
@@ -376,8 +399,8 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           onDiscardSuggestedEntry={() => setSuggestedEntry(null)}
           thinkingSteps={thinkingSteps}
           isThinking={isThinking}
-          logs={logs}
-          onClearLogs={() => setLogs([])}
+          logGroups={logGroups}
+          onClearLogs={() => setLogGroups([])}
         />
       </div>
     </div>
