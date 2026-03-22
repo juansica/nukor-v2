@@ -11,7 +11,6 @@ export async function GET() {
     const { data: areas, error } = await supabaseAdmin
       .from('areas')
       .select('*')
-      .eq('workspace_id', '00000000-0000-0000-0000-000000000001')
       .order('created_at', { ascending: false })
 
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
