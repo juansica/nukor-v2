@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 const supabaseAdmin = createClient(
@@ -19,24 +20,42 @@ export async function GET() {
   return NextResponse.json(areas)
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { name, description, color, created_by } = await req.json()
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    }
+
+    const { name, description, color } = await request.json()
+
+    if (!name) {
+      return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400 })
+    }
+
     const { data: area, error } = await supabaseAdmin
       .from('areas')
       .insert({
         name,
-        description,
-        color,
-        created_by,
-        workspace_id: DEFAULT_WORKSPACE_ID
+        description: description ?? null,
+        color: color ?? '#4F46E5',
+        workspace_id: DEFAULT_WORKSPACE_ID,
+        created_by: user.id,
       })
       .select()
       .single()
 
-    if (error) throw error
-    return NextResponse.json(area)
+    if (error) {
+      console.error('Area insert error:', error)
+      return new Response(JSON.stringify({ error: error.message, detail: error }), { status: 500 })
+    }
+
+    return new Response(JSON.stringify({ area }), { status: 201 })
+
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Areas route error:', err)
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
   }
 }
