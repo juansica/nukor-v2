@@ -292,7 +292,14 @@ function LibraryClient() {
         setAreas(Array.isArray(aData.areas) ? aData.areas : [])
       }
 
-      if (areaId && areaId !== 'unclassified') {
+      if (!areaId) {
+        // Fetch all collections on the main page so we can compute per-area counts
+        const cRes = await fetch('/api/collections')
+        if (cRes.ok) {
+          const cData = await cRes.json()
+          setCollections(Array.isArray(cData.collections) ? cData.collections : [])
+        }
+      } else if (areaId && areaId !== 'unclassified') {
         const cRes = await fetch(`/api/collections?areaId=${areaId}`)
         if (cRes.ok) {
           const cData = await cRes.json()
@@ -439,7 +446,7 @@ function LibraryClient() {
                     <h3 className="text-lg font-bold text-gray-950 mb-2">{area.name}</h3>
                     <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">{area.description || 'Sin descripción'}</p>
                     <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
-                      <span className="flex items-center gap-1"><Grid size={14}/> {area.collections?.length || 0} colecciones</span>
+                      <span className="flex items-center gap-1"><Grid size={14}/> {collections.filter(c => c.area_id === area.id).length} colecciones</span>
                       <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => e.area_id === area.id).length} entradas</span>
                     </div>
                   </Link>
