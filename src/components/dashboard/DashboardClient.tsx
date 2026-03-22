@@ -181,10 +181,68 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
     } finally {
       setIsTyping(false)
       setIsStreaming(false)
+      
+      // After stream completes, check for save intent
+      const jsonMatch = fullContent.match(/\{"intent":"save".*?\}/)
+      if (jsonMatch) {
+        try {
+          const saveData = JSON.parse(jsonMatch[0])
+          const cleanedContent = fullContent.replace(jsonMatch[0], '').trim()
+          
+          // Update messages with cleaned content
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === capturedId
+                ? {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === aiMsgId ? { ...m, content: cleanedContent } : m
+                    ),
+                  }
+                : c
+            )
+          )
+          
+          // Set suggested entry for UI banner
+          setSuggestedEntry({
+            title: saveData.title,
+            content: saveData.content
+          })
+          
+          fullContent = cleanedContent // Use cleaned content for persistence
+        } catch (e) {
+          console.error('[Nukor] Failed to parse save intent JSON:', e)
+        }
+      }
     }
 
     if (fullContent) {
       persistMessages(capturedId, convTitle, isNew, content, fullContent, finalUsage)
+    }
+  }
+
+  const [suggestedEntry, setSuggestedEntry] = useState<{title: string, content: string} | null>(null)
+
+  const handleSaveSuggestedEntry = async () => {
+    if (!suggestedEntry) return
+    try {
+      const res = await fetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: suggestedEntry.title, 
+          content: suggestedEntry.content, 
+          workspace_id: '00000000-0000-0000-0000-000000000001' 
+        })
+      })
+
+      if (!res.ok) throw new Error('Failed to save entry')
+      
+      import('sonner').then(({ toast }) => toast.success('Entrada guardada correctamente'))
+      setSuggestedEntry(null)
+    } catch (err) {
+      console.error('Save suggested entry error:', err)
+      import('sonner').then(({ toast }) => toast.error('Error al guardar la entrada'))
     }
   }
 
@@ -239,6 +297,9 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           userName={userName}
           workspaceId={currentWorkspaceId}
           userId={userId}
+          suggestedEntry={suggestedEntry}
+          onSaveSuggestedEntry={handleSaveSuggestedEntry}
+          onDiscardSuggestedEntry={() => setSuggestedEntry(null)}
         />
       </div>
     </div>

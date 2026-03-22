@@ -43,6 +43,9 @@ interface ChatAreaProps {
   userName: string
   workspaceId: string
   userId: string
+  suggestedEntry?: { title: string, content: string } | null
+  onSaveSuggestedEntry?: () => void
+  onDiscardSuggestedEntry?: () => void
 }
 
 const parseMessageContent = (content: string) => {
@@ -65,6 +68,9 @@ const ChatArea = ({
   userName,
   workspaceId,
   userId,
+  suggestedEntry,
+  onSaveSuggestedEntry,
+  onDiscardSuggestedEntry,
 }: ChatAreaProps) => {
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
