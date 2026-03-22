@@ -461,9 +461,6 @@ const ChatArea = ({
       {/* Input bar */}
       <ChatInput onSend={onSendMessage} disabled={isTyping || isStreaming} />
 
-        {/* Input bar */}
-        <ChatInput onSend={onSendMessage} disabled={isTyping || isStreaming} />
-
         {/* Save Entry Modal */}
         <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
           <DialogContent className="sm:max-w-[500px] bg-white border-gray-200 shadow-lg text-gray-950 p-6 rounded-2xl">
