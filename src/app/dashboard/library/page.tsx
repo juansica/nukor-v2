@@ -262,33 +262,43 @@ function LibraryClient() {
   }, [searchQuery])
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setCurrentUserId(user.id)
-      setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario')
-      setUserEmail(user.email ?? '')
+    try {
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+        setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario')
+        setUserEmail(user.email ?? '')
+      }
+
+      // Fetch Areas
+      const aRes = await fetch('/api/areas')
+      if (aRes.ok) {
+        const aData = await aRes.json()
+        setAreas(Array.isArray(aData) ? aData : [])
+      }
+
+      if (areaId) {
+        const cRes = await fetch(`/api/collections?areaId=${areaId}`)
+        if (cRes.ok) {
+          const cData = await cRes.json()
+          setCollections(Array.isArray(cData) ? cData : [])
+        }
+      }
+
+      const { data: eData } = await supabase
+        .from('entries')
+        .select('*, profiles(email, full_name)')
+        .eq('workspace_id', DEFAULT_WORKSPACE_ID)
+        .is('deleted_at', null)
+
+      setEntries(Array.isArray(eData) ? eData as any : [])
+    } catch (err: any) {
+      console.error('[Library] Error fetching data:', err)
+      toast.error('Error al cargar datos. Por favor, recarga la página.')
+    } finally {
+      setLoading(false)
     }
-
-    // Fetch Areas
-    const aRes = await fetch('/api/areas')
-    const aData = await aRes.json()
-    setAreas(aData || [])
-
-    if (areaId) {
-      const cRes = await fetch(`/api/collections?areaId=${areaId}`)
-      const cData = await cRes.json()
-      setCollections(cData || [])
-    }
-
-    const { data: eData } = await supabase
-      .from('entries')
-      .select('*, profiles(email, full_name)')
-      .eq('workspace_id', DEFAULT_WORKSPACE_ID)
-      .is('deleted_at', null)
-
-    setEntries(eData as any || [])
-    setLoading(false)
   }, [areaId, collectionId, supabase])
 
   useEffect(() => { fetchData() }, [fetchData])
