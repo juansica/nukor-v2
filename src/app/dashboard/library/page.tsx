@@ -23,7 +23,8 @@ import {
   Filter,
   Inbox,
   FolderOpen,
-  ArrowLeft
+  ArrowLeft,
+  RotateCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -190,7 +191,7 @@ function EntryDetailDrawer({ entry, currentUserId, onClose, onUpdate }: { entry:
     } catch (err: any) { toast.error(err.message) } finally { setSaving(false) }
   }
 
-  const authorName = entry.created_by === currentUserId ? 'Tú' : (entry.profiles?.email?.split('@')[0] ?? 'Usuario')
+  const authorName = entry.created_by === currentUserId ? 'Tú' : 'Asistente'
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
@@ -302,7 +303,7 @@ function LibraryClient() {
 
       const { data: eData, error: eError } = await supabase
         .from('entries')
-        .select('*, profiles(email, full_name)')
+        .select('*')
         .eq('workspace_id', DEFAULT_WORKSPACE_ID)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -378,6 +379,13 @@ function LibraryClient() {
             </div>
           </div>
           <div className="flex gap-3">
+            <button 
+              onClick={fetchData} 
+              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+              title="Refrescar datos"
+            >
+              <RotateCcw size={20} className={loading ? 'animate-spin' : ''} />
+            </button>
             {!areaId && <button onClick={() => setShowAreaModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva área</button>}
             {areaId && !collectionId && <button onClick={() => setShowCollModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva colección</button>}
             {collectionId && <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva entrada</Link>}
@@ -520,7 +528,7 @@ function LibraryClient() {
                       </div>
                       <p className="text-sm text-gray-500 line-clamp-1 mb-2 font-medium">{entry.content.slice(0, 100)}...</p>
                       <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400">
-                        <span className="text-indigo-600">{entry.profiles?.email?.split('@')[0] || 'Tú'}</span>
+                        <span className="text-indigo-600">{entry.created_by === currentUserId ? 'Tú' : 'Asistente'}</span>
                         <span>{formatDate(entry.created_at)}</span>
                       </div>
                     </div>
