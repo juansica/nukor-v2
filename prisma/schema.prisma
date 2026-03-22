@@ -1,0 +1,858 @@
+// ==================================================
+// GENERATOR & DATASOURCE
+// ==================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================================================
+// ENUMS
+// ==================================================
+
+enum MemberRole {
+  admin
+  editor
+  viewer
+}
+
+enum FeedbackType {
+  helpful
+  outdated
+  incorrect
+}
+
+enum ReactionType {
+  confirmed
+  outdated
+  confusing
+  helpful
+}
+
+enum RelationType {
+  parent
+  related
+  duplicate
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+enum EventType {
+  view
+  search_click
+  copy
+}
+
+enum FollowObjectType {
+  entry
+  area
+  tag
+}
+
+enum MentionObjectType {
+  message
+  comment
+  entry
+}
+
+enum MentionedType {
+  user
+  area
+  entry
+}
+
+enum IntegrationType {
+  slack
+  email
+  whatsapp
+  notion
+}
+
+enum CustomFieldType {
+  text
+  number
+  date
+  boolean
+  select
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  cancelled
+  trialing
+}
+
+// ==================================================
+// USERS & AUTH
+// ==================================================
+
+model Profile {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  full_name         String?
+  avatar_url        String?
+  last_workspace_id String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  last_workspace        Workspace?           @relation("ProfileLastWorkspace", fields: [last_workspace_id], references: [id])
+  created_workspaces    Workspace[]          @relation("WorkspaceCreatedBy")
+  workspace_members     WorkspaceMember[]
+  created_invitations   Invitation[]
+  created_areas         Area[]
+  created_collections   Collection[]
+  area_members          AreaMember[]
+  created_entries       Entry[]
+  entry_versions        EntryVersion[]
+  entry_feedback        EntryFeedback[]
+  reactions             Reaction[]
+  comments              Comment[]
+  conversations         Conversation[]
+  search_history        SearchHistory[]
+  user_roles            UserRole[]
+  onboarding_progress   OnboardingProgress[]
+  follows               Follow[]
+  created_templates     Template[]
+  created_announcements Announcement[]
+  saved_views           SavedView[]
+  notifications         Notification[]
+  activity_logs         ActivityLog[]
+  entry_analytics       EntryAnalytics[]
+
+  @@index([email])
+  @@map("profiles")
+}
+
+model Invitation {
+  id           String     @id @default(uuid())
+  email        String
+  workspace_id String
+  role         MemberRole
+  token        String     @unique
+  expires_at   DateTime
+  accepted_at  DateTime?
+  created_by   String
+  created_at   DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  creator   Profile   @relation(fields: [created_by], references: [id])
+
+  @@index([workspace_id])
+  @@index([token])
+  @@index([email])
+  @@map("invitations")
+}
+
+// ==================================================
+// WORKSPACES
+// ==================================================
+
+model Workspace {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  logo_url   String?
+  created_by String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  creator           Profile           @relation("WorkspaceCreatedBy", fields: [created_by], references: [id])
+  profiles_last     Profile[]         @relation("ProfileLastWorkspace")
+  members           WorkspaceMember[]
+  invitations       Invitation[]
+  areas             Area[]
+  collections       Collection[]
+  entries           Entry[]
+  tags              Tag[]
+  conversations     Conversation[]
+  search_history    SearchHistory[]
+  custom_fields     CustomField[]
+  roles             Role[]
+  onboarding_tracks OnboardingTrack[]
+  announcements     Announcement[]
+  saved_views       SavedView[]
+  activity_logs     ActivityLog[]
+  integrations      Integration[]
+  subscription      Subscription?
+  templates         Template[]
+  user_roles        UserRole[]
+  ai_usage          AiUsage[]
+
+  @@index([slug])
+  @@index([created_by])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id           String     @id @default(uuid())
+  workspace_id String
+  user_id      String
+  role         MemberRole
+  joined_at    DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user      Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, user_id])
+  @@index([workspace_id])
+  @@index([user_id])
+  @@map("workspace_members")
+}
+
+// ==================================================
+// AREAS
+// ==================================================
+
+model Area {
+  id           String   @id @default(uuid())
+  workspace_id String
+  name         String
+  description  String?
+  color        String?
+  icon         String?
+  created_by   String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace     Workspace      @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  creator       Profile        @relation(fields: [created_by], references: [id])
+  members       AreaMember[]
+  collections   Collection[]
+  entries       Entry[]
+  templates     Template[]
+  announcements Announcement[]
+
+  @@index([workspace_id])
+  @@index([created_by])
+  @@map("areas")
+}
+
+model AreaMember {
+  id         String     @id @default(uuid())
+  area_id    String
+  user_id    String
+  role       MemberRole
+  created_at DateTime   @default(now())
+
+  area Area    @relation(fields: [area_id], references: [id], onDelete: Cascade)
+  user Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([area_id, user_id])
+  @@index([area_id])
+  @@index([user_id])
+  @@map("area_members")
+}
+
+// ==================================================
+// KNOWLEDGE
+// ==================================================
+
+model Collection {
+  id           String   @id @default(uuid())
+  workspace_id String
+  area_id      String
+  name         String
+  description  String?
+  color        String?
+  icon         String?
+  embedding    Unsupported("vector(1536)")?
+  entry_count  Int      @default(0)
+  file_count   Int      @default(0)
+  created_by   String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  area      Area      @relation(fields: [area_id], references: [id], onDelete: Cascade)
+  creator   Profile   @relation(fields: [created_by], references: [id])
+  entries   Entry[]
+
+  @@index([workspace_id])
+  @@index([area_id])
+  @@map("collections")
+}
+
+model Entry {
+  id           String    @id @default(uuid())
+  workspace_id String
+  area_id      String?
+  collection_id String?
+  title        String
+  content      String
+  summary      String?
+  created_by   String
+  is_published Boolean   @default(false)
+  deleted_at   DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  workspace            Workspace             @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  area                 Area?                 @relation(fields: [area_id], references: [id])
+  collection           Collection?           @relation(fields: [collection_id], references: [id])
+  creator              Profile               @relation(fields: [created_by], references: [id])
+  versions             EntryVersion[]
+  entry_tags           EntryTag[]
+  feedback             EntryFeedback[]
+  reactions            Reaction[]
+  source_relations     EntryRelation[]       @relation("SourceEntry")
+  target_relations     EntryRelation[]       @relation("TargetEntry")
+  comments             Comment[]
+  analytics            EntryAnalytics[]
+  source_suggestions   EntrySuggestion[]     @relation("SuggestionSource")
+  target_suggestions   EntrySuggestion[]     @relation("SuggestionTarget")
+  onboarding_entries   OnboardingTrackEntry[]
+  onboarding_progress  OnboardingProgress[]
+  custom_field_values  CustomFieldValue[]
+
+  @@index([workspace_id])
+  @@index([area_id])
+  @@index([collection_id])
+  @@index([created_by])
+  @@index([created_at])
+  @@index([is_published])
+  @@map("entries")
+}
+
+model EntryVersion {
+  id         String   @id @default(uuid())
+  entry_id   String
+  content    String
+  edited_by  String
+  created_at DateTime @default(now())
+
+  entry  Entry   @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  editor Profile @relation(fields: [edited_by], references: [id])
+
+  @@index([entry_id])
+  @@index([edited_by])
+  @@map("entry_versions")
+}
+
+model Tag {
+  id           String   @id @default(uuid())
+  workspace_id String
+  name         String
+  color        String?
+  created_at   DateTime @default(now())
+
+  workspace  Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  entry_tags EntryTag[]
+
+  @@index([workspace_id])
+  @@map("tags")
+}
+
+model EntryTag {
+  id       String @id @default(uuid())
+  entry_id String
+  tag_id   String
+
+  entry Entry @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@unique([entry_id, tag_id])
+  @@index([entry_id])
+  @@index([tag_id])
+  @@map("entry_tags")
+}
+
+model EntryFeedback {
+  id         String       @id @default(uuid())
+  entry_id   String
+  user_id    String
+  type       FeedbackType
+  comment    String?
+  created_at DateTime     @default(now())
+
+  entry Entry   @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  user  Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([entry_id])
+  @@index([user_id])
+  @@map("entry_feedback")
+}
+
+model Reaction {
+  id         String       @id @default(uuid())
+  entry_id   String
+  user_id    String
+  type       ReactionType
+  created_at DateTime     @default(now())
+
+  entry Entry   @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  user  Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([entry_id, user_id])
+  @@index([entry_id])
+  @@index([user_id])
+  @@map("reactions")
+}
+
+model EntryRelation {
+  id              String       @id @default(uuid())
+  source_entry_id String
+  target_entry_id String
+  relation_type   RelationType
+  created_at      DateTime     @default(now())
+
+  source_entry Entry @relation("SourceEntry", fields: [source_entry_id], references: [id], onDelete: Cascade)
+  target_entry Entry @relation("TargetEntry", fields: [target_entry_id], references: [id], onDelete: Cascade)
+
+  @@index([source_entry_id])
+  @@index([target_entry_id])
+  @@map("entry_relations")
+}
+
+model Comment {
+  id         String    @id @default(uuid())
+  entry_id   String
+  user_id    String
+  content    String
+  parent_id  String?
+  deleted_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  entry   Entry     @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  user    Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([entry_id])
+  @@index([user_id])
+  @@index([parent_id])
+  @@map("comments")
+}
+
+model EntryAnalytics {
+  id         String    @id @default(uuid())
+  entry_id   String
+  user_id    String
+  event_type EventType
+  created_at DateTime  @default(now())
+
+  entry Entry   @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+  user  Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([entry_id])
+  @@index([user_id])
+  @@index([created_at])
+  @@map("entry_analytics")
+}
+
+// ==================================================
+// CHAT
+// ==================================================
+
+model Conversation {
+  id           String   @id @default(uuid())
+  workspace_id String
+  user_id      String
+  title        String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user      Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@map("conversations")
+}
+
+model Message {
+  id              String      @id @default(uuid())
+  conversation_id String
+  role            MessageRole
+  content         String
+  input_tokens    Int         @default(0)
+  output_tokens   Int         @default(0)
+  model           String?
+  created_at      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@map("messages")
+}
+
+// ==================================================
+// SEARCH & INTELLIGENCE
+// ==================================================
+
+model SearchHistory {
+  id            String   @id @default(uuid())
+  workspace_id  String
+  user_id       String
+  query         String
+  found_results Boolean
+  created_at    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user      Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@index([created_at])
+  @@map("search_history")
+}
+
+model EntrySuggestion {
+  id                 String   @id @default(uuid())
+  source_entry_id    String
+  suggested_entry_id String
+  accepted           Boolean  @default(false)
+  created_at         DateTime @default(now())
+
+  source_entry    Entry @relation("SuggestionSource", fields: [source_entry_id], references: [id], onDelete: Cascade)
+  suggested_entry Entry @relation("SuggestionTarget", fields: [suggested_entry_id], references: [id], onDelete: Cascade)
+
+  @@index([source_entry_id])
+  @@index([suggested_entry_id])
+  @@map("entry_suggestions")
+}
+
+// ==================================================
+// TEMPLATES
+// ==================================================
+
+model Template {
+  id           String   @id @default(uuid())
+  workspace_id String
+  name         String
+  description  String?
+  content      String
+  area_id      String?
+  is_global    Boolean  @default(false)
+  created_by   String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  area      Area?     @relation(fields: [area_id], references: [id])
+  creator   Profile   @relation(fields: [created_by], references: [id])
+
+  @@index([workspace_id])
+  @@index([area_id])
+  @@map("templates")
+}
+
+// ==================================================
+// CUSTOM FIELDS
+// ==================================================
+
+model CustomField {
+  id           String          @id @default(uuid())
+  workspace_id String
+  name         String
+  field_type   CustomFieldType
+  options      Json?
+  created_at   DateTime        @default(now())
+
+  workspace Workspace         @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  values    CustomFieldValue[]
+
+  @@index([workspace_id])
+  @@map("custom_fields")
+}
+
+model CustomFieldValue {
+  id              String   @id @default(uuid())
+  custom_field_id String
+  entry_id        String
+  value           String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  custom_field CustomField @relation(fields: [custom_field_id], references: [id], onDelete: Cascade)
+  entry        Entry       @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+
+  @@index([custom_field_id])
+  @@index([entry_id])
+  @@map("custom_field_values")
+}
+
+// ==================================================
+// ROLES & ONBOARDING
+// ==================================================
+
+model Role {
+  id           String   @id @default(uuid())
+  workspace_id String
+  name         String
+  description  String?
+  created_at   DateTime @default(now())
+
+  workspace         Workspace        @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user_roles        UserRole[]
+  onboarding_tracks OnboardingTrack[]
+
+  @@index([workspace_id])
+  @@map("roles")
+}
+
+model UserRole {
+  id           String   @id @default(uuid())
+  user_id      String
+  workspace_id String
+  role_id      String
+  created_at   DateTime @default(now())
+
+  user      Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([workspace_id])
+  @@index([role_id])
+  @@map("user_roles")
+}
+
+model OnboardingTrack {
+  id           String   @id @default(uuid())
+  workspace_id String
+  role_id      String?
+  name         String
+  created_at   DateTime @default(now())
+
+  workspace Workspace             @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  role      Role?                 @relation(fields: [role_id], references: [id])
+  entries   OnboardingTrackEntry[]
+  progress  OnboardingProgress[]
+
+  @@index([workspace_id])
+  @@index([role_id])
+  @@map("onboarding_tracks")
+}
+
+model OnboardingTrackEntry {
+  id                String   @id @default(uuid())
+  track_id          String
+  entry_id          String
+  order             Int
+  estimated_minutes Int?
+  created_at        DateTime @default(now())
+
+  track OnboardingTrack @relation(fields: [track_id], references: [id], onDelete: Cascade)
+  entry Entry           @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+
+  @@index([track_id])
+  @@index([entry_id])
+  @@map("onboarding_track_entries")
+}
+
+model OnboardingProgress {
+  id           String   @id @default(uuid())
+  user_id      String
+  track_id     String
+  entry_id     String
+  completed_at DateTime @default(now())
+
+  user  Profile         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  track OnboardingTrack @relation(fields: [track_id], references: [id], onDelete: Cascade)
+  entry Entry           @relation(fields: [entry_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([track_id])
+  @@index([entry_id])
+  @@map("onboarding_progress")
+}
+
+// ==================================================
+// ENGAGEMENT
+// ==================================================
+
+model Follow {
+  id          String          @id @default(uuid())
+  user_id     String
+  object_type FollowObjectType
+  object_id   String
+  created_at  DateTime        @default(now())
+
+  user Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, object_type, object_id])
+  @@index([user_id])
+  @@index([object_id])
+  @@map("follows")
+}
+
+model Mention {
+  id             String            @id @default(uuid())
+  object_type    MentionObjectType
+  object_id      String
+  mentioned_type MentionedType
+  mentioned_id   String
+  created_at     DateTime          @default(now())
+
+  @@index([object_id])
+  @@index([mentioned_id])
+  @@map("mentions")
+}
+
+model Announcement {
+  id           String    @id @default(uuid())
+  workspace_id String
+  area_id      String?
+  title        String
+  content      String
+  expires_at   DateTime?
+  created_by   String
+  created_at   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  area      Area?     @relation(fields: [area_id], references: [id])
+  creator   Profile   @relation(fields: [created_by], references: [id])
+
+  @@index([workspace_id])
+  @@index([area_id])
+  @@map("announcements")
+}
+
+model SavedView {
+  id           String   @id @default(uuid())
+  user_id      String
+  workspace_id String
+  name         String
+  filters      Json
+  is_shared    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  user      Profile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([workspace_id])
+  @@map("saved_views")
+}
+
+// ==================================================
+// NOTIFICATIONS
+// ==================================================
+
+model Notification {
+  id          String    @id @default(uuid())
+  user_id     String
+  type        String
+  title       String
+  body        String?
+  object_type String?
+  object_id   String?
+  read_at     DateTime?
+  created_at  DateTime  @default(now())
+
+  user Profile @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([created_at])
+  @@map("notifications")
+}
+
+// ==================================================
+// SYSTEM
+// ==================================================
+
+model ActivityLog {
+  id           String   @id @default(uuid())
+  workspace_id String
+  user_id      String
+  action       String
+  object_type  String
+  object_id    String
+  metadata     Json?
+  created_at   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  user      Profile   @relation(fields: [user_id], references: [id])
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@index([created_at])
+  @@map("activity_logs")
+}
+
+// ==================================================
+// INTEGRATIONS & BILLING
+// ==================================================
+
+model Integration {
+  id           String          @id @default(uuid())
+  workspace_id String
+  type         IntegrationType
+  credentials  Json
+  is_active    Boolean         @default(true)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@index([workspace_id])
+  @@map("integrations")
+}
+
+model Plan {
+  id            String   @id @default(uuid())
+  name          String
+  max_users     Int
+  max_entries   Int
+  max_areas     Int
+  price_monthly Decimal
+  price_yearly  Decimal
+  created_at    DateTime @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  workspace_id           String             @unique
+  plan_id                String
+  status                 SubscriptionStatus
+  stripe_customer_id     String?
+  stripe_subscription_id String?
+  current_period_start   DateTime
+  current_period_end     DateTime
+  created_at             DateTime           @default(now())
+  updated_at             DateTime           @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  plan      Plan      @relation(fields: [plan_id], references: [id])
+
+  @@index([workspace_id])
+  @@index([plan_id])
+  @@map("subscriptions")
+}
+
+// ==================================================
+// AI USAGE
+// ==================================================
+
+model AiUsage {
+  id            String   @id @default(uuid())
+  workspace_id  String
+  month         String
+  input_tokens  Int      @default(0)
+  output_tokens Int      @default(0)
+  total_cost    Decimal  @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, month])
+  @@index([workspace_id])
+  @@map("ai_usage")
+}
+
