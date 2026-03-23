@@ -273,6 +273,12 @@ function LibraryClient() {
   const [editContent, setEditContent] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
+  // Reset selection when leaving the collections view
+  useEffect(() => {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }, [areaId])
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 350)
     return () => clearTimeout(timer)
