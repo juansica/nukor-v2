@@ -45,6 +45,13 @@ export async function POST(req: Request) {
       slug = `${baseSlug}-${i}`
     }
 
+    // Profile must exist before workspace (FK: workspaces.created_by -> profiles.id)
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({ id: user.id, email: user.email, full_name: full_name.trim() })
+
+    if (profileError) return new Response(JSON.stringify({ error: profileError.message }), { status: 500 })
+
     // Create workspace
     const { data: workspace, error: wsError } = await supabaseAdmin
       .from('workspaces')
@@ -61,17 +68,13 @@ export async function POST(req: Request) {
 
     if (memberError) return new Response(JSON.stringify({ error: memberError.message }), { status: 500 })
 
-    // Upsert profile with name and workspace
-    const { error: profileError } = await supabaseAdmin
+    // Update profile with the new workspace
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .upsert({
-        id: user.id,
-        email: user.email,
-        full_name: full_name.trim(),
-        last_workspace_id: workspace.id,
-      })
+      .update({ last_workspace_id: workspace.id })
+      .eq('id', user.id)
 
-    if (profileError) return new Response(JSON.stringify({ error: profileError.message }), { status: 500 })
+    if (updateError) return new Response(JSON.stringify({ error: updateError.message }), { status: 500 })
 
     return new Response(JSON.stringify({ workspace }), { status: 200 })
   } catch (err: any) {
