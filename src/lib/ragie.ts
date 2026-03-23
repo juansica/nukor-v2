@@ -3,7 +3,7 @@ import { Ragie } from 'ragie'
 export const ragie = new Ragie({ auth: process.env.RAGIE_API_KEY! })
 
 export async function uploadDocument(
-  file: Uint8Array,
+  blob: Blob,
   filename: string,
   metadata: {
     workspace_id: string
@@ -11,7 +11,6 @@ export async function uploadDocument(
     collection_id?: string
   }
 ) {
-  const blob = new Blob([file])
   const document = await ragie.documents.create({
     file: { content: blob, fileName: filename },
     metadata,

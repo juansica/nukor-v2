@@ -41,9 +41,7 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ error: 'El archivo no puede superar 50MB' }), { status: 400 })
     }
 
-    const buffer = new Uint8Array(await file.arrayBuffer())
-
-    const ragieDoc = await uploadDocument(buffer, file.name, {
+    const ragieDoc = await uploadDocument(file, file.name, {
       workspace_id: workspaceId,
       ...(areaId ? { area_id: areaId } : {}),
       ...(collectionId ? { collection_id: collectionId } : {}),
