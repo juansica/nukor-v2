@@ -261,6 +261,7 @@ function LibraryClient() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState('Usuario')
   const [userEmail, setUserEmail] = useState('')
+  const [workspaceName, setWorkspaceName] = useState('Mi workspace')
 
   // Modals state
   const [showAreaModal, setShowAreaModal] = useState(false)
@@ -289,6 +290,11 @@ function LibraryClient() {
         setCurrentUserId(user.id)
         setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario')
         setUserEmail(user.email ?? '')
+        const { data: profile } = await supabase.from('profiles').select('last_workspace_id').eq('id', user.id).maybeSingle()
+        if (profile?.last_workspace_id) {
+          const { data: ws } = await supabase.from('workspaces').select('name').eq('id', profile.last_workspace_id).maybeSingle()
+          if (ws?.name) setWorkspaceName(ws.name)
+        }
       }
 
       console.log('[Library] Fetching data via API routes...')
@@ -382,7 +388,7 @@ function LibraryClient() {
   return (
     <div className="h-screen flex overflow-hidden bg-[#F1F3F6]">
       <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 h-full bg-white border-r border-gray-200 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <Sidebar activeConversationId={null} onSelectConversation={() => {}} onNewConversation={() => {}} userName={userName} userEmail={userEmail} onClose={() => setSidebarOpen(false)} />
+        <Sidebar activeConversationId={null} onSelectConversation={() => {}} onNewConversation={() => {}} userName={userName} userEmail={userEmail} workspaceName={workspaceName} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
