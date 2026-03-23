@@ -28,7 +28,7 @@ export async function GET() {
       return Response.json({ documents: [] })
     }
 
-    const iterator = ragie.documents.list({
+    const iterator = await ragie.documents.list({
       partition: `workspace-${workspaceId}`,
     })
 
