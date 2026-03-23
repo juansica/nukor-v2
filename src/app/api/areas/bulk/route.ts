@@ -21,12 +21,11 @@ export async function POST(req: Request) {
       return Response.json({ error: 'action and ids are required' }, { status: 400 })
     }
 
-    // Verify ownership
+    // Verify all requested area IDs actually exist
     const { data: owned, error: ownerErr } = await supabaseAdmin
       .from('areas')
       .select('id')
       .in('id', ids)
-      .eq('created_by', user.id)
 
     if (ownerErr || !owned || owned.length !== ids.length) {
       return Response.json({ error: 'One or more areas not found' }, { status: 404 })
