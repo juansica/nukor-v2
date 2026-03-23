@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { IConversation } from '@/types/chat'
@@ -146,13 +147,15 @@ const Sidebar = ({
 
       {/* New conversation */}
       <div className="p-4 pl-5 pr-5 flex-shrink-0">
-        <button
+        <motion.button
           onClick={handleNewConversationClick}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
         >
           <Plus size={16} />
           Nueva conversación
-        </button>
+        </motion.button>
       </div>
 
       {/* Nav */}
@@ -210,9 +213,12 @@ const Sidebar = ({
                   {convs.map((conv) => {
                     const isActive = conv.id === activeConversationId
                     return (
-                      <div
+                      <motion.div
                         key={conv.id}
                         className="group relative"
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2 }}
                       >
                         <button
                           onClick={() => handleSelectConversationClick(conv.id)}
@@ -233,7 +239,7 @@ const Sidebar = ({
                         >
                           <X size={12} />
                         </button>
-                      </div>
+                      </motion.div>
                     )
                   })}
                 </div>

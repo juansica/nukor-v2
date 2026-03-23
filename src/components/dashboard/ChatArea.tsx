@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { IConversation } from '@/types/chat'
 import ChatInput from '@/components/dashboard/ChatInput'
 import { toast } from 'sonner'
@@ -365,7 +366,12 @@ const ChatArea = ({
               const isLastMsg = idx === conversation.messages.length - 1
               const showCursor = isStreaming && isLastMsg && msg.role === 'assistant'
               return (
-                <div key={msg.id}>
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                >
                   <div
                     className={`flex items-end gap-3 max-w-[760px] mx-auto w-full mt-2 ${
                       isUser ? 'flex-row-reverse' : 'flex-row'
@@ -424,21 +430,30 @@ const ChatArea = ({
                   </div>
 
                   {/* Save Detection Banner (Directly below last AI message) */}
+                  <AnimatePresence>
                   {!isUser && isLastMsg && suggestedEntry && (
-                    <div className="max-w-[760px] mx-auto w-full mt-2 mb-4 px-10">
-                      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl animate-in slide-in-from-top-2 duration-300">
+                    <motion.div
+                      className="max-w-[760px] mx-auto w-full mt-2 mb-4 px-10"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                    >
+                      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-xl">
                         <BookmarkPlus className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-indigo-700">Nukor detectó conocimiento nuevo</p>
                           <p className="text-xs text-indigo-500 truncate">"{suggestedEntry?.title}"</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button
+                          <motion.button
                             onClick={onSaveSuggestedEntry}
                             className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors shadow-sm"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.97 }}
                           >
                             Guardar
-                          </button>
+                          </motion.button>
                           <button
                             onClick={onDiscardSuggestedEntry}
                             className="text-xs text-indigo-400 hover:text-indigo-600 flex-shrink-0 p-1"
@@ -447,9 +462,10 @@ const ChatArea = ({
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
+                  </AnimatePresence>
+                </motion.div>
               )
             })}
 
@@ -513,11 +529,15 @@ const ChatArea = ({
       </div>
 
       {/* Logs Panel - floats in from the right edge of container */}
-      <div className={`
-        absolute right-0 top-0 h-full w-80 bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col
-        transition-transform duration-300
-        ${logsOpen ? 'translate-x-0' : 'translate-x-full'}
-      `}>
+      <AnimatePresence>
+      {logsOpen && (
+      <motion.div
+        className="absolute right-0 top-0 h-full w-80 bg-white border-l border-gray-200 shadow-xl z-40 flex flex-col"
+        initial={{ x: 320, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 320, opacity: 0 }}
+        transition={{ duration: 0.25, ease: 'easeOut' }}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-indigo-500" />
@@ -548,7 +568,9 @@ const ChatArea = ({
             </button>
           </div>
         )}
-      </div>
+      </motion.div>
+      )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -234,6 +234,15 @@ function EntryDetailDrawer({ entry, currentUserId, onClose, onUpdate }: { entry:
 }
 
 import { Suspense } from 'react'
+import { motion } from 'framer-motion'
+
+const cardVariants = {
+  initial: { opacity: 0, scale: 0.97 },
+  animate: { opacity: 1, scale: 1 }
+}
+const containerVariants = {
+  animate: { transition: { staggerChildren: 0.07 } }
+}
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 function LibraryClient() {
@@ -437,19 +446,26 @@ function LibraryClient() {
                     Dentro de cada área puedes crear colecciones para organizar el conocimiento por temas.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <motion.div
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  variants={containerVariants}
+                  initial="initial"
+                  animate="animate"
+                >
                 {areas.map(area => (
-                  <Link key={area.id} href={`/dashboard/library?area=${area.id}`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden" style={{ borderLeftColor: area.color || '#e2e8f0' }}>
-                    <div className="flex items-start mb-4">
-                      <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><Layers size={24} /></div>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-950 mb-2">{area.name}</h3>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">{area.description || 'Sin descripción'}</p>
-                    <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
-                      <span className="flex items-center gap-1"><Grid size={14}/> {collections.filter(c => c.area_id === area.id).length} colecciones</span>
-                      <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => e.area_id === area.id).length} entradas</span>
-                    </div>
-                  </Link>
+                  <motion.div key={area.id} variants={cardVariants}>
+                    <Link href={`/dashboard/library?area=${area.id}`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden block" style={{ borderLeftColor: area.color || '#e2e8f0' }}>
+                      <div className="flex items-start mb-4">
+                        <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><Layers size={24} /></div>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-950 mb-2">{area.name}</h3>
+                      <p className="text-sm text-gray-500 line-clamp-2 mb-6 font-medium">{area.description || 'Sin descripción'}</p>
+                      <div className="flex items-center gap-4 text-xs font-bold text-gray-400">
+                        <span className="flex items-center gap-1"><Grid size={14}/> {collections.filter(c => c.area_id === area.id).length} colecciones</span>
+                        <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => e.area_id === area.id).length} entradas</span>
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
                 {/* ONBOARDING NOTE: Explain to new users that entries saved without
                     creating areas first will appear in "Sin clasificar". They can
@@ -464,7 +480,7 @@ function LibraryClient() {
                     <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => !e.area_id).length} entradas</span>
                   </div>
                 </Link>
-              </div>
+              </motion.div>
               </>
             )}
 

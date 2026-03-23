@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { IConversation, IMessage } from '@/types/chat'
 import { ChatMessage, StreamUsage, streamChat } from '@/lib/openai'
@@ -401,7 +402,12 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
   }
 
   return (
-    <div className="h-screen flex overflow-hidden relative bg-background-secondary text-text-primary">
+    <motion.div
+      className="h-screen flex overflow-hidden relative bg-background-secondary text-text-primary"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+    >
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
@@ -450,6 +456,6 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           onClearLogs={() => setLogGroups([])}
         />
       </div>
-    </div>
+    </motion.div>
   )
 }
