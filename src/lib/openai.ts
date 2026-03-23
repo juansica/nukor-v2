@@ -30,11 +30,10 @@ export type StreamEvent =
  * Yields StreamEvent objects — callers should handle each event type.
  */
 export async function* streamChat(
-  _workspaceId: string,
+  workspaceId: string,
   messages: ChatMessage[],
   conversationId?: string | null
 ): AsyncGenerator<StreamEvent> {
-  const workspaceId = '00000000-0000-0000-0000-000000000001'
   console.log('Sending to /api/chat:', { messages, workspaceId })
 
   let response: Response
