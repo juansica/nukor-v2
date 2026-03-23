@@ -21,21 +21,11 @@ export async function POST(req: Request) {
       return Response.json({ error: 'action and ids are required' }, { status: 400 })
     }
 
-    // Verify all collections belong to the user's workspace
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('last_workspace_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    const workspaceId = profile?.last_workspace_id
-    if (!workspaceId) return Response.json({ error: 'Workspace not found' }, { status: 404 })
-
     const { data: owned, error: ownerErr } = await supabaseAdmin
       .from('collections')
       .select('id')
       .in('id', ids)
-      .eq('workspace_id', workspaceId)
+      .eq('created_by', user.id)
 
     if (ownerErr || !owned || owned.length !== ids.length) {
       return Response.json({ error: 'One or more collections not found' }, { status: 404 })

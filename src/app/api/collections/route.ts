@@ -8,7 +8,14 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const DEFAULT_WORKSPACE_ID = '00000000-0000-0000-0000-000000000001'
+async function getWorkspaceId(userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('last_workspace_id')
+    .eq('id', userId)
+    .maybeSingle()
+  return data?.last_workspace_id ?? null
+}
 
 export async function GET(req: Request) {
   try {
@@ -18,13 +25,16 @@ export async function GET(req: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
     }
 
+    const workspaceId = await getWorkspaceId(user.id)
+    if (!workspaceId) return new Response(JSON.stringify({ error: 'Workspace not found' }), { status: 404 })
+
     const { searchParams } = new URL(req.url)
     const areaId = searchParams.get('areaId')
 
     let query = supabaseAdmin
       .from('collections')
       .select('*, entries(id)')
-      .eq('workspace_id', DEFAULT_WORKSPACE_ID)
+      .eq('created_by', user.id)
 
     if (areaId) {
       query = query.eq('area_id', areaId)
@@ -47,6 +57,9 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
     }
 
+    const workspaceId = await getWorkspaceId(user.id)
+    if (!workspaceId) return new Response(JSON.stringify({ error: 'Workspace not found' }), { status: 404 })
+
     const { name, description, area_id } = await req.json()
     if (!name || !area_id) {
       return new Response(JSON.stringify({ error: 'Name and areaId are required' }), { status: 400 })
@@ -59,7 +72,7 @@ export async function POST(req: Request) {
         description: description ?? null,
         area_id,
         created_by: user.id,
-        workspace_id: DEFAULT_WORKSPACE_ID
+        workspace_id: workspaceId
       })
       .select()
       .single()
