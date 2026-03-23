@@ -20,6 +20,7 @@ export type StreamEvent =
   | { type: 'token'; content: string }
   | { type: 'step'; content: string }
   | { type: 'log'; log: any }
+  | { type: 'sources'; sources: { title: string; collectionName?: string | null }[] }
   | { type: 'done'; usage: StreamUsage }
   | { type: 'error'; error: string }
   | { type: 'conversation'; id: string }
@@ -84,6 +85,8 @@ export async function* streamChat(
           yield { type: 'log', log: parsed.log }
         } else if (parsed.step) {
           yield { type: 'step', content: parsed.step }
+        } else if (parsed.sources) {
+          yield { type: 'sources', sources: parsed.sources }
         } else if (parsed.text) {
           yield { type: 'token', content: parsed.text }
         } else if (parsed.type === 'token') {

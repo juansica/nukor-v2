@@ -1,3 +1,8 @@
+export interface IMessageSource {
+  title: string;
+  collectionName?: string | null;
+}
+
 export interface IMessage {
   id: string;
   role: "user" | "assistant";
@@ -6,6 +11,7 @@ export interface IMessage {
   inputTokens?: number;
   outputTokens?: number;
   model?: string;
+  sources?: IMessageSource[];
 }
 
 export interface IConversation {

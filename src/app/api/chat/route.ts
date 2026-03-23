@@ -524,6 +524,28 @@ Ofrece ayuda para resolver cada problema encontrado.`
       }
     }
 
+    // Resolve collection names for RAG sources
+    const ragCollectionIds = [...new Set(
+      similarEntries.filter((e: any) => e.collection_id).map((e: any) => e.collection_id as string)
+    )]
+    let ragCollectionNames: Record<string, string> = {}
+    if (ragCollectionIds.length > 0) {
+      const { data: colls } = await supabaseAdmin
+        .from('collections').select('id, name').in('id', ragCollectionIds)
+      ragCollectionNames = Object.fromEntries((colls || []).map((c: any) => [c.id, c.name]))
+    }
+    // Deduplicate by collection (show collection once, not once per entry)
+    const seenCollections = new Set<string>()
+    const ragSources = similarEntries.reduce((acc: { title: string; collectionName: string | null }[], e: any) => {
+      const collName = e.collection_id ? (ragCollectionNames[e.collection_id] ?? null) : null
+      const key = collName ?? e.title
+      if (!seenCollections.has(key)) {
+        seenCollections.add(key)
+        acc.push({ title: e.title, collectionName: collName })
+      }
+      return acc
+    }, [])
+
     // Search Ragie for document chunks
     const ragieChunks = await searchRagie(userMessage, effectiveWorkspaceId)
     if (ragieChunks.length > 0) {
@@ -728,6 +750,9 @@ Ofrece ayuda para resolver cada problema encontrado.`
             console.error('[Nukor DB Error]:', dbErr)
           }
 
+          if (ragSources.length > 0) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ sources: ragSources })}\n\n`))
+          }
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (err: any) {
           console.error('[Nukor API Error]:', err)

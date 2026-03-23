@@ -442,19 +442,19 @@ const ChatArea = ({
                             )}
                           </div>
 
-                          {msg.role === 'assistant' &&
-                            parseMessageContent(msg.content).sources.length > 0 && (
-                              <div className="flex flex-wrap gap-2 mt-2 ml-1">
-                                {parseMessageContent(msg.content).sources.map((source, i) => (
-                                  <span
-                                    key={i}
-                                    className="text-xs font-medium tracking-tight px-3 py-1 rounded-md bg-background-tertiary text-text-muted border border-border-default shadow-sm"
-                                  >
-                                    {source}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                          {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2 ml-1">
+                              {msg.sources.map((source, i) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex items-center gap-1.5 text-xs font-medium tracking-tight px-3 py-1 rounded-md bg-background-tertiary text-text-muted border border-border-default shadow-sm"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+                                  {source.collectionName ?? source.title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </>
                       )}
                     </div>

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
     }
 
-    const { full_name, workspace_name } = await req.json()
+    const { full_name, workspace_name, initial_areas } = await req.json()
     if (!full_name?.trim() || !workspace_name?.trim()) {
       return new Response(JSON.stringify({ error: 'full_name and workspace_name are required' }), { status: 400 })
     }
@@ -76,7 +76,20 @@ export async function POST(req: Request) {
 
     if (updateError) return new Response(JSON.stringify({ error: updateError.message }), { status: 500 })
 
-    return new Response(JSON.stringify({ workspace }), { status: 200 })
+    // Seed initial areas if provided
+    const areasToCreate: { name: string; color: string }[] = Array.isArray(initial_areas) ? initial_areas : []
+    if (areasToCreate.length > 0) {
+      await supabaseAdmin.from('areas').insert(
+        areasToCreate.map((a) => ({
+          name: a.name,
+          color: a.color,
+          workspace_id: workspace.id,
+          created_by: user.id,
+        }))
+      )
+    }
+
+    return new Response(JSON.stringify({ workspace, areas_created: areasToCreate.length }), { status: 200 })
   } catch (err: any) {
     console.error('Onboarding error:', err)
     return new Response(JSON.stringify({ error: err.message }), { status: 500 })

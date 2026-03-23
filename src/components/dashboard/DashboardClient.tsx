@@ -300,6 +300,22 @@ export default function DashboardClient({ userId, userName, userEmail, workspace
           )
         }
 
+        if (event.type === 'sources') {
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === effectiveConvId
+                ? {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === aiMsgId ? { ...m, sources: event.sources } : m
+                    ),
+                  }
+                : c
+            )
+          )
+          continue
+        }
+
         if (event.type === 'done') {
           finalUsage = event.usage
           fetchConversations() // Final refresh for title update
