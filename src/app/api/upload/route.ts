@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) return new Response(JSON.stringify({ error: 'Failed to save entry' }), { status: 500 })
 
     return new Response(
       JSON.stringify({ success: true, entry, ragie_document_id: ragieDoc.id }),
@@ -69,6 +69,6 @@ export async function POST(request: Request) {
     )
   } catch (err: any) {
     console.error('Upload error:', err)
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Upload failed' }), { status: 500 })
   }
 }

@@ -10,15 +10,21 @@ const supabaseAdmin = createClient(
 
 export async function GET() {
   try {
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    }
+
     const { data: areas, error } = await supabaseAdmin
       .from('areas')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) return new Response(JSON.stringify({ error: 'Failed to fetch areas' }), { status: 500 })
     return new Response(JSON.stringify({ areas }), { status: 200 })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }
 
@@ -47,9 +53,9 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) return new Response(JSON.stringify({ error: 'Failed to create area' }), { status: 500 })
     return new Response(JSON.stringify({ area }), { status: 201 })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }

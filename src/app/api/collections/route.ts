@@ -12,6 +12,12 @@ const DEFAULT_WORKSPACE_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function GET(req: Request) {
   try {
+    const supabase = await createServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
     const areaId = searchParams.get('areaId')
 
@@ -26,10 +32,10 @@ export async function GET(req: Request) {
 
     const { data: collections, error } = await query.order('name')
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) return new Response(JSON.stringify({ error: 'Failed to fetch collections' }), { status: 500 })
     return new Response(JSON.stringify({ collections }), { status: 200 })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }
 
@@ -58,9 +64,9 @@ export async function POST(req: Request) {
       .select()
       .single()
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    if (error) return new Response(JSON.stringify({ error: 'Failed to create collection' }), { status: 500 })
     return new Response(JSON.stringify({ collection }), { status: 201 })
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }

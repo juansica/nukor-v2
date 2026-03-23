@@ -144,7 +144,7 @@ async function executeTool(name: string, args: any, workspaceId: string, userId:
 
       if (error) {
         console.error('create_entry error:', error)
-        return JSON.stringify({ success: false, error: error.message })
+        return JSON.stringify({ success: false, error: 'Failed to create entry' })
       }
 
       // Generate embedding after saving
@@ -186,7 +186,7 @@ async function executeTool(name: string, args: any, workspaceId: string, userId:
         .select()
         .single()
 
-      if (error) return JSON.stringify({ success: false, error: error.message })
+      if (error) return JSON.stringify({ success: false, error: 'Failed to create collection' })
       return JSON.stringify({ success: true, collection: { id: data.id, name: data.name } })
     }
     default:
@@ -492,6 +492,7 @@ Tu trabajo es detectar la intención del usuario en cada mensaje:
     })
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+    console.error('Chat route error:', err)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }
