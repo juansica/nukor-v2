@@ -213,6 +213,28 @@ const ChatArea = ({
   const [entryContent, setEntryContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('workspace_id', workspaceId)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Error al subir el archivo')
+      } else {
+        toast.success(`"${file.name}" subido correctamente`)
+      }
+    } catch {
+      toast.error('Error al subir el archivo')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   const [logsOpen, setLogsOpen] = useState(false)
   const [hasNewLogs, setHasNewLogs] = useState(false)
   const prevEventsCountRef = useRef(0)
@@ -475,7 +497,12 @@ const ChatArea = ({
       </div>
 
       {/* Input bar */}
-      <ChatInput onSend={onSendMessage} disabled={isTyping || isStreaming} />
+      <ChatInput
+        onSend={onSendMessage}
+        disabled={isTyping || isStreaming}
+        onFileSelect={handleFileUpload}
+        isUploading={isUploading}
+      />
 
         {/* Save Entry Modal */}
         <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>

@@ -262,6 +262,9 @@ function LibraryClient() {
   const [userName, setUserName] = useState('Usuario')
   const [userEmail, setUserEmail] = useState('')
   const [workspaceName, setWorkspaceName] = useState('Mi workspace')
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   // Modals state
   const [showAreaModal, setShowAreaModal] = useState(false)
@@ -292,6 +295,7 @@ function LibraryClient() {
         setUserEmail(user.email ?? '')
         const { data: profile } = await supabase.from('profiles').select('last_workspace_id').eq('id', user.id).maybeSingle()
         if (profile?.last_workspace_id) {
+          setWorkspaceId(profile.last_workspace_id)
           const { data: ws } = await supabase.from('workspaces').select('name').eq('id', profile.last_workspace_id).maybeSingle()
           if (ws?.name) setWorkspaceName(ws.name)
         }
@@ -361,6 +365,37 @@ function LibraryClient() {
     }
     return result
   }, [entries, areaId, collectionId, debouncedQuery])
+
+  const handleFileUpload = async (file: File) => {
+    if (!workspaceId) return
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('workspace_id', workspaceId)
+      if (areaId && areaId !== 'unclassified') formData.append('area_id', areaId)
+      if (collectionId) formData.append('collection_id', collectionId)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Error al subir el archivo')
+      } else {
+        toast.success(`"${file.name}" subido correctamente`)
+        fetchData()
+      }
+    } catch {
+      toast.error('Error al subir el archivo')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFileUpload(file)
+  }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -518,6 +553,29 @@ function LibraryClient() {
                 ))}
               </div>
               </>
+            )}
+
+            {collectionId && (
+              <div
+                className={`mb-4 border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${isDragging ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30'}`}
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.pdf,.doc,.docx,.xls,.xlsx'; i.onchange = (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) handleFileUpload(f) }; i.click() }}
+              >
+                {isUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-6 h-6 rounded-full border-2 border-indigo-300 border-t-indigo-600 animate-spin" />
+                    <p className="text-sm font-medium text-indigo-600">Subiendo documento...</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-2xl mb-2">📎</p>
+                    <p className="text-sm font-semibold text-gray-700">Arrastra archivos aquí</p>
+                    <p className="text-xs text-gray-400 mt-0.5">o haz clic para seleccionar · PDF, Word, Excel · máx 50MB</p>
+                  </>
+                )}
+              </div>
             )}
 
             {(collectionId || debouncedQuery || areaId === 'unclassified') && (

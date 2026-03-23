@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { searchRagie } from '@/lib/ragie'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -266,6 +267,20 @@ Tu trabajo es detectar la intención del usuario en cada mensaje:
         systemPrompt += `---\n${entry.title}\n${entry.content}\n`
       })
       systemPrompt += `\n\nFuentes utilizadas: ${similarEntries.map((e: any) => e.title).join(', ')}`
+    }
+
+    // Search Ragie for document chunks
+    const ragieChunks = await searchRagie(userMessage, effectiveWorkspaceId)
+    if (ragieChunks.length > 0) {
+      systemPrompt += `\n\nContexto adicional de documentos:\n`
+      ragieChunks.forEach((chunk: any) => {
+        systemPrompt += `---\n${chunk.text}\n`
+      })
+      activityLogs.push({
+        type: 'rag_result',
+        title: `${ragieChunks.length} fragmentos de documentos encontrados`,
+        data: ragieChunks.map((c: any) => ({ text: c.text?.slice(0, 80) }))
+      })
     }
 
     // --- Streaming Logic with Iterative Tool Calling ---
