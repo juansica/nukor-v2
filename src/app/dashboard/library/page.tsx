@@ -219,7 +219,7 @@ function LibraryClient() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [moveDropdownId, setMoveDropdownId] = useState<string | null>(null)
 
-  // Bulk selection state
+  // Bulk selection state — collections
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -229,6 +229,36 @@ function LibraryClient() {
     setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   const selectAll = () => setSelectedIds(new Set(collections.map(c => c.id)))
   const clearSelection = () => { setSelectedIds(new Set()); setSelectionMode(false) }
+
+  // Bulk selection state — areas
+  const [areaSelectionMode, setAreaSelectionMode] = useState(false)
+  const [selectedAreaIds, setSelectedAreaIds] = useState<Set<string>>(new Set())
+  const [areasBulkLoading, setAreasBulkLoading] = useState(false)
+  const [showAreasBulkDeleteConfirm, setShowAreasBulkDeleteConfirm] = useState(false)
+
+  const toggleAreaSelect = (id: string) =>
+    setSelectedAreaIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  const selectAllAreas = () => setSelectedAreaIds(new Set(areas.map(a => a.id)))
+  const clearAreaSelection = () => { setSelectedAreaIds(new Set()); setAreaSelectionMode(false) }
+
+  const executeAreasBulkDelete = async () => {
+    setShowAreasBulkDeleteConfirm(false)
+    setAreasBulkLoading(true)
+    try {
+      const res = await fetch('/api/areas/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', ids: Array.from(selectedAreaIds) }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Error al eliminar'); return }
+      setAreas(prev => prev.filter(a => !selectedAreaIds.has(a.id)))
+      setCollections(prev => prev.filter(c => !areas.find(a => selectedAreaIds.has(a.id) && a.id === c.area_id)))
+      toast.success(`${selectedAreaIds.size} área${selectedAreaIds.size !== 1 ? 's' : ''} eliminada${selectedAreaIds.size !== 1 ? 's' : ''}`)
+      clearAreaSelection()
+    } catch { toast.error('Error de red') }
+    finally { setAreasBulkLoading(false) }
+  }
 
   const executeBulkDelete = async () => {
     setShowBulkDeleteConfirm(false)
@@ -273,10 +303,18 @@ function LibraryClient() {
   const [editContent, setEditContent] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  // Reset selection when leaving the collections view
+  // Reset collection selection when navigating between areas
   useEffect(() => {
     setSelectionMode(false)
     setSelectedIds(new Set())
+  }, [areaId])
+
+  // Reset area selection when navigating into an area
+  useEffect(() => {
+    if (areaId) {
+      setAreaSelectionMode(false)
+      setSelectedAreaIds(new Set())
+    }
   }, [areaId])
 
   useEffect(() => {
@@ -481,7 +519,18 @@ function LibraryClient() {
             >
               <RotateCcw size={20} className={loading ? 'animate-spin' : ''} />
             </button>
-            {!areaId && libraryTab === 'entries' && <button onClick={() => setShowAreaModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva área</button>}
+            {!areaId && libraryTab === 'entries' && (
+              <>
+                <button
+                  onClick={() => { setAreaSelectionMode(s => !s); setSelectedAreaIds(new Set()) }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm ${areaSelectionMode ? 'bg-gray-900 text-white hover:bg-gray-700' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <CheckSquare size={16} />
+                  {areaSelectionMode ? 'Cancelar' : 'Seleccionar'}
+                </button>
+                <button onClick={() => setShowAreaModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva área</button>
+              </>
+            )}
             {areaId && !collectionId && areaId !== 'unclassified' && (
               <button
                 onClick={() => { setSelectionMode(s => !s); setSelectedIds(new Set()) }}
@@ -563,9 +612,18 @@ function LibraryClient() {
                   initial="initial"
                   animate="animate"
                 >
-                {areas.map(area => (
-                  <motion.div key={area.id} variants={cardVariants}>
-                    <Link href={`/dashboard/library?area=${area.id}`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden block" style={{ borderLeftColor: area.color || '#e2e8f0' }}>
+                {areas.map(area => {
+                  const isAreaSelected = selectedAreaIds.has(area.id)
+                  const areaCardClass = `group bg-white p-6 rounded-2xl border-l-[6px] border transition-all relative overflow-hidden block ${
+                    isAreaSelected ? 'border-indigo-500 ring-2 ring-indigo-200 shadow-md' : 'border-gray-200 hover:shadow-xl'
+                  }`
+                  const areaInner = (
+                    <>
+                      {areaSelectionMode && (
+                        <div className={`absolute top-3 right-3 z-10 w-5 h-5 rounded flex items-center justify-center transition-colors ${isAreaSelected ? 'text-indigo-600' : 'text-gray-300'}`}>
+                          {isAreaSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                        </div>
+                      )}
                       <div className="flex items-start mb-4">
                         <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors"><Layers size={24} /></div>
                       </div>
@@ -575,9 +633,18 @@ function LibraryClient() {
                         <span className="flex items-center gap-1"><Grid size={14}/> {collections.filter(c => c.area_id === area.id).length} colecciones</span>
                         <span className="flex items-center gap-1"><BookOpen size={14}/> {entries.filter(e => e.area_id === area.id).length} entradas</span>
                       </div>
-                    </Link>
-                  </motion.div>
-                ))}
+                    </>
+                  )
+                  return (
+                    <motion.div key={area.id} variants={cardVariants}>
+                      {areaSelectionMode ? (
+                        <div onClick={() => toggleAreaSelect(area.id)} className={`${areaCardClass} cursor-pointer select-none`} style={{ borderLeftColor: area.color || '#e2e8f0' }}>{areaInner}</div>
+                      ) : (
+                        <Link href={`/dashboard/library?area=${area.id}`} className={areaCardClass} style={{ borderLeftColor: area.color || '#e2e8f0' }}>{areaInner}</Link>
+                      )}
+                    </motion.div>
+                  )
+                })}
                 <Link href={`/dashboard/library?area=unclassified`} className="group bg-white p-6 rounded-2xl border-l-[6px] border border-gray-200 hover:shadow-xl transition-all relative overflow-hidden" style={{ borderLeftColor: '#9ca3af' }}>
                   <div className="flex items-start mb-4">
                     <div className="p-2 rounded-xl bg-gray-50 text-gray-400 group-hover:bg-gray-100 transition-colors"><Inbox size={24} /></div>
@@ -1017,6 +1084,53 @@ function LibraryClient() {
               <button onClick={() => setShowBulkDeleteConfirm(false)} className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
               <button onClick={executeBulkDelete} disabled={bulkLoading} className="px-6 py-2 text-sm font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
                 {bulkLoading ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating bulk action bar — areas */}
+      {areaSelectionMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2 bg-gray-950 text-white rounded-2xl px-4 py-3 shadow-2xl shadow-black/30 border border-white/10">
+            <span className="text-sm font-semibold text-gray-300 mr-1">
+              {selectedAreaIds.size > 0 ? `${selectedAreaIds.size} seleccionada${selectedAreaIds.size !== 1 ? 's' : ''}` : 'Sin selección'}
+            </span>
+            <div className="w-px h-5 bg-white/20 mx-1" />
+            <button
+              onClick={selectAllAreas}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <CheckCheck size={14} /> Seleccionar todo
+            </button>
+            <button
+              onClick={() => { if (selectedAreaIds.size > 0) setShowAreasBulkDeleteConfirm(true) }}
+              disabled={selectedAreaIds.size === 0 || areasBulkLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-40"
+            >
+              <Trash2 size={14} /> Eliminar
+            </button>
+            <div className="w-px h-5 bg-white/20 mx-1" />
+            <button
+              onClick={clearAreaSelection}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAreasBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold mb-2 text-gray-950">¿Eliminar {selectedAreaIds.size} área{selectedAreaIds.size !== 1 ? 's' : ''}?</h2>
+            <p className="text-sm text-gray-500 mb-6 font-medium">Se eliminarán todas las colecciones y entradas dentro de estas áreas. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowAreasBulkDeleteConfirm(false)} className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
+              <button onClick={executeAreasBulkDelete} disabled={areasBulkLoading} className="px-6 py-2 text-sm font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+                {areasBulkLoading ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
