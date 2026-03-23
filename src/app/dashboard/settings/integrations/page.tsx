@@ -1,11 +1,26 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/dashboard/Sidebar'
 import { toast } from 'sonner'
 import { Menu, CheckCircle2, RefreshCcw, Unplug, Plug } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
+
+function ConnectedToast({ onConnected }: { onConnected: () => void }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (searchParams.get('connected') === 'true') {
+      toast.success('¡Fuente conectada exitosamente!')
+      router.replace('/dashboard/settings/integrations')
+      onConnected()
+    }
+  }, [searchParams])
+
+  return null
+}
 
 interface Connection {
   id: string
@@ -30,8 +45,6 @@ const CONNECTORS = [
 
 export default function IntegrationsPage() {
   const supabase = createClient()
-  const searchParams = useSearchParams()
-  const router = useRouter()
 
   const [userName, setUserName] = useState('')
   const [userEmail, setUserEmail] = useState('')
@@ -78,14 +91,6 @@ export default function IntegrationsPage() {
   useEffect(() => {
     fetchConnections()
   }, [fetchConnections])
-
-  useEffect(() => {
-    if (searchParams.get('connected') === 'true') {
-      toast.success('¡Fuente conectada exitosamente!')
-      router.replace('/dashboard/settings/integrations')
-      fetchConnections()
-    }
-  }, [searchParams])
 
   const handleConnect = async (provider: string) => {
     if (!workspaceId) return
@@ -141,6 +146,9 @@ export default function IntegrationsPage() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Suspense>
+        <ConnectedToast onConnected={fetchConnections} />
+      </Suspense>
       <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 h-full bg-white border-r border-gray-200 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <Sidebar
           activeConversationId={null}
