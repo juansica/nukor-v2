@@ -1,4 +1,4 @@
-import Ragie from 'ragie'
+import { Ragie } from 'ragie'
 
 export const ragie = new Ragie({ auth: process.env.RAGIE_API_KEY! })
 
