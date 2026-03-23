@@ -31,9 +31,10 @@ interface DashboardClientProps {
   userId: string
   userName: string
   userEmail: string
+  workspaceName: string
 }
 
-export default function DashboardClient({ userId, userName, userEmail }: DashboardClientProps) {
+export default function DashboardClient({ userId, userName, userEmail, workspaceName }: DashboardClientProps) {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -432,6 +433,7 @@ export default function DashboardClient({ userId, userName, userEmail }: Dashboa
           onDeleteConversation={handleDeleteConversation}
           userName={userName}
           userEmail={userEmail}
+          workspaceName={workspaceName}
           onClose={() => setSidebarOpen(false)}
         />
       </aside>

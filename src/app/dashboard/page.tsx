@@ -28,6 +28,12 @@ export default async function DashboardPage() {
     redirect('/onboarding')
   }
 
+  const { data: workspace } = await supabaseAdmin
+    .from('workspaces')
+    .select('name')
+    .eq('id', profile.last_workspace_id)
+    .maybeSingle()
+
   const userName =
     profile.full_name ||
     (user.user_metadata?.full_name as string) ||
@@ -41,6 +47,7 @@ export default async function DashboardPage() {
       userId={user.id}
       userName={userName}
       userEmail={userEmail}
+      workspaceName={workspace?.name ?? 'Mi workspace'}
     />
   )
 }

@@ -12,6 +12,7 @@ interface SidebarProps {
   onNewConversation: () => void
   userName: string
   userEmail: string
+  workspaceName: string
   onClose: () => void
   onDeleteConversation?: (id: string) => void
 }
@@ -27,6 +28,7 @@ const Sidebar = ({
   onNewConversation,
   userName,
   userEmail,
+  workspaceName,
   onClose,
   onDeleteConversation,
 }: SidebarProps) => {
@@ -119,7 +121,7 @@ const Sidebar = ({
             onClick={() => setWorkspaceOpen(!workspaceOpen)}
             className="flex items-center justify-between w-full rounded-lg px-3 py-2 bg-white border border-gray-200 shadow-sm hover:border-gray-300 transition-colors"
           >
-            <span className="text-sm font-medium text-gray-950">Mi workspace</span>
+            <span className="text-sm font-medium text-gray-950">{workspaceName}</span>
             <ChevronDown size={16} className={`text-gray-500 transition-transform ${workspaceOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -127,7 +129,7 @@ const Sidebar = ({
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-600">
                 <div className="w-5 h-5 rounded bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">N</div>
-                <span className="text-sm font-medium">Mi Workspace</span>
+                <span className="text-sm font-medium">{workspaceName}</span>
                 <Check className="w-4 h-4 ml-auto" />
               </div>
 
