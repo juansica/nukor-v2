@@ -32,9 +32,10 @@ interface DashboardClientProps {
   userName: string
   userEmail: string
   workspaceName: string
+  workspaceId: string
 }
 
-export default function DashboardClient({ userId, userName, userEmail, workspaceName }: DashboardClientProps) {
+export default function DashboardClient({ userId, userName, userEmail, workspaceName, workspaceId }: DashboardClientProps) {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -122,7 +123,7 @@ export default function DashboardClient({ userId, userName, userEmail, workspace
 
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? null
-  const currentWorkspaceId = userId || 'default'
+  const currentWorkspaceId = workspaceId || userId || 'default'
 
 
 
@@ -366,6 +367,40 @@ export default function DashboardClient({ userId, userName, userEmail, workspace
     }
   }
 
+  const [isFileUploading, setIsFileUploading] = useState(false)
+
+  const handleFileUpload = async (file: File) => {
+    setIsFileUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('workspace_id', currentWorkspaceId)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        import('sonner').then(({ toast }) => toast.error(data.error || 'Error al subir el archivo'))
+        return
+      }
+      import('sonner').then(({ toast }) => toast.success(`"${file.name}" subido correctamente`))
+      // Add a local file message to the active conversation
+      const fileMsg: IMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: `__FILE__${file.name}__${file.type}__${file.size}`,
+        timestamp: new Date(),
+      }
+      if (activeConversationId) {
+        setConversations(prev =>
+          prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, fileMsg] } : c)
+        )
+      }
+    } catch {
+      import('sonner').then(({ toast }) => toast.error('Error al subir el archivo'))
+    } finally {
+      setIsFileUploading(false)
+    }
+  }
+
   const [suggestedEntry, setSuggestedEntry] = useState<{title: string, content: string} | null>(null)
 
   const handleSaveSuggestedEntry = async () => {
@@ -456,6 +491,8 @@ export default function DashboardClient({ userId, userName, userEmail, workspace
           isThinking={isThinking}
           logGroups={logGroups}
           onClearLogs={() => setLogGroups([])}
+          onFileUpload={handleFileUpload}
+          isFileUploading={isFileUploading}
         />
       </div>
     </motion.div>
