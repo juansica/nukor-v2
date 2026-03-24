@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2, RefreshCcw, Unplug, Plug, RotateCcw } from 'lucide-react'
+import { CheckCircle2, RefreshCcw, Unplug, Plug, RotateCcw, AlertTriangle, FileText, AlertCircle, WifiOff } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
 
 function ConnectedToast({ onConnected, redirectTo }: { onConnected: () => void; redirectTo: string }) {
@@ -25,9 +25,13 @@ interface Connection {
   name: string
   type: string
   enabled: boolean
+  disabledBySystem: boolean
+  disabledBySystemReason: 'connection_over_total_page_limit' | 'authentication_failed' | null
   lastSyncedAt: Date | null
   syncing: boolean | null
   partition?: string | null
+  documentCount: number | null
+  pageCount: number | null
 }
 
 const CONNECTORS = [
@@ -158,43 +162,103 @@ export default function IntegrationsTab({ workspaceId, redirectTo = '/dashboard/
               const meta = getConnectorMeta(conn.type)
               const isDisconnecting = disconnecting === conn.id
               const isSyncing = syncing === conn.id || conn.syncing
+              const isAuthError = conn.disabledBySystemReason === 'authentication_failed'
+              const isOverLimit = conn.disabledBySystemReason === 'connection_over_total_page_limit'
+              const hasError = conn.disabledBySystem
+              const isDisabled = !conn.enabled && !conn.disabledBySystem
+
+              const borderColor = hasError ? 'border-red-200 bg-red-50/40' : isDisabled ? 'border-gray-200 bg-gray-50/60' : 'border-gray-200 bg-white'
+
               return (
-                <div key={conn.id} className="flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-xl px-5 py-4">
-                  <span className="text-2xl">{meta.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-gray-950">{conn.name || meta.label}</p>
-                      <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                        <CheckCircle2 size={12} />
-                        Conectado
-                      </span>
-                      {isSyncing && (
-                        <span className="flex items-center gap-1 text-xs text-indigo-500 font-medium">
-                          <RefreshCcw size={12} className="animate-spin" />
-                          Sincronizando
-                        </span>
+                <div key={conn.id} className={`rounded-xl border px-5 py-4 transition-all ${borderColor}`}>
+                  <div className="flex items-start gap-4">
+                    <span className="text-2xl mt-0.5">{meta.emoji}</span>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Name + status badges */}
+                      <div className="flex items-center flex-wrap gap-2 mb-1">
+                        <p className="text-sm font-semibold text-gray-950">{conn.name || meta.label}</p>
+                        {isSyncing ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                            <RefreshCcw size={10} className="animate-spin" />
+                            Sincronizando
+                          </span>
+                        ) : isAuthError ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full">
+                            <AlertCircle size={10} />
+                            Error de autenticación
+                          </span>
+                        ) : isOverLimit ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                            <AlertTriangle size={10} />
+                            Límite de páginas alcanzado
+                          </span>
+                        ) : isDisabled ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
+                            <WifiOff size={10} />
+                            Desactivado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                            <CheckCircle2 size={10} />
+                            Conectado
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="flex items-center flex-wrap gap-3 text-xs text-gray-400">
+                        {conn.documentCount !== null && (
+                          <span className="flex items-center gap-1">
+                            <FileText size={11} />
+                            {conn.documentCount.toLocaleString('es-CL')} {conn.documentCount === 1 ? 'documento' : 'documentos'}
+                          </span>
+                        )}
+                        {conn.pageCount !== null && conn.pageCount > 0 && (
+                          <span>{conn.pageCount.toLocaleString('es-CL')} páginas</span>
+                        )}
+                        <span>Última sync: {formatLastSync(conn.lastSyncedAt)}</span>
+                      </div>
+
+                      {/* Error hint */}
+                      {isAuthError && (
+                        <p className="text-xs text-red-500 mt-1.5">
+                          La autenticación expiró. Reconecta la fuente para restaurar la sincronización.
+                        </p>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">Última sincronización: {formatLastSync(conn.lastSyncedAt)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleSync(conn.id)}
-                      disabled={!!isSyncing || isDisconnecting}
-                      title="Sincronizar ahora"
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-40"
-                    >
-                      <RotateCcw size={13} className={syncing === conn.id ? 'animate-spin' : ''} />
-                      {syncing === conn.id ? 'Sincronizando...' : 'Sincronizar'}
-                    </button>
-                    <button
-                      onClick={() => handleDisconnect(conn.id)}
-                      disabled={isDisconnecting || !!syncing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
-                    >
-                      <Unplug size={13} />
-                      {isDisconnecting ? 'Desconectando...' : 'Desconectar'}
-                    </button>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                      {isAuthError ? (
+                        <button
+                          onClick={() => handleConnect(conn.type)}
+                          disabled={!!connecting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-40 shadow-sm"
+                        >
+                          <Plug size={12} />
+                          Reconectar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSync(conn.id)}
+                          disabled={!!isSyncing || isDisconnecting}
+                          title="Sincronizar ahora"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-40"
+                        >
+                          <RotateCcw size={12} className={syncing === conn.id ? 'animate-spin' : ''} />
+                          {syncing === conn.id ? 'Sincronizando...' : 'Sincronizar'}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDisconnect(conn.id)}
+                        disabled={isDisconnecting || !!syncing}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        <Unplug size={12} />
+                        {isDisconnecting ? 'Desconectando...' : 'Desconectar'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

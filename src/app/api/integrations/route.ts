@@ -33,12 +33,26 @@ export async function GET() {
       partition: `workspace-${workspaceId}`,
     })
 
-    const connections = []
+    const connections: any[] = []
     for await (const page of iterator) {
       connections.push(...page.result.connections)
     }
 
-    return Response.json({ connections })
+    // Fetch stats for each connection in parallel
+    const statsResults = await Promise.allSettled(
+      connections.map((c: any) => ragie.connections.getStats({ connectionId: c.id }))
+    )
+
+    const enriched = connections.map((c: any, i: number) => {
+      const stats = statsResults[i].status === 'fulfilled' ? statsResults[i].value : null
+      return {
+        ...c,
+        documentCount: stats?.documentCount ?? null,
+        pageCount: stats?.pageCount ?? null,
+      }
+    })
+
+    return Response.json({ connections: enriched })
   } catch {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
