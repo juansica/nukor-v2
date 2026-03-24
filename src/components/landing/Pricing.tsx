@@ -1,48 +1,55 @@
 const plans = [
   {
+    id: "starter",
     name: "Starter",
     price: "Gratis",
     period: "",
-    description: "Para equipos pequeños que empiezan a organizar su conocimiento.",
+    description: "Para un solo usuario que quiere empezar a organizar su conocimiento.",
     features: [
-      "Hasta 5 usuarios",
-      "Chat IA ilimitado",
-      "100 documentos",
-      "Búsqueda básica",
+      "1 usuario",
+      "Hasta 10 documentos",
+      "Límite de uso de IA diario",
+      "Búsqueda semántica",
     ],
-    cta: "Empieza ahora",
+    cta: "Empieza gratis",
     featured: false,
+    ctaHref: "/signup",
   },
   {
-    name: "Growth",
-    price: "$49",
+    id: "pro",
+    name: "Pro",
+    price: "$29.99",
     period: "/mes",
-    description: "Para empresas en crecimiento que necesitan escalar su conocimiento.",
+    description: "Para equipos pequeños que necesitan colaborar y escalar su base de conocimiento.",
     features: [
-      "Hasta 50 usuarios",
-      "Chat IA con fuentes citadas",
-      "Documentos ilimitados",
-      "Permisos por equipo y rol",
-      "Integraciones (Slack, Teams)",
+      "Hasta 5 usuarios",
+      "Hasta 25 documentos",
+      "IA sin límite diario",
+      "Hasta 2 integraciones",
+      "Fuentes citadas en el chat",
     ],
     cta: "Empezar prueba gratis",
     featured: true,
     badge: "Más popular",
+    ctaHref: "/signup?plan=pro",
   },
   {
+    id: "enterprise",
     name: "Enterprise",
     price: "Custom",
     period: "",
-    description: "Para organizaciones que requieren control total y soporte dedicado.",
+    description: "Para organizaciones que requieren control total, soporte dedicado y acceso a la API.",
     features: [
-      "Usuarios ilimitados",
-      "SSO y SAML",
-      "API completa",
-      "SLA garantizado",
+      "Hasta 50 usuarios",
+      "Documentos ilimitados",
+      "Acceso a la API",
+      "Integraciones ilimitadas",
+      "Soporte prioritario",
       "Onboarding personalizado",
     ],
     cta: "Contactar ventas",
     featured: false,
+    ctaHref: "mailto:sales@nukor.app",
   },
 ];
 
@@ -70,8 +77,8 @@ const Pricing = () => (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
         {plans.map((plan) => (
           <div key={plan.name} className={`relative flex flex-col p-8 rounded-2xl bg-white ${
-            plan.featured 
-              ? "border-2 border-indigo-600 shadow-xl transform md:-translate-y-4" 
+            plan.featured
+              ? "border-2 border-indigo-600 shadow-xl transform md:-translate-y-4"
               : "border border-gray-200 shadow-sm"
           }`}>
             {plan.featured && plan.badge && (
@@ -101,7 +108,7 @@ const Pricing = () => (
                 </li>
               ))}
             </ul>
-            <a href="#"
+            <a href={plan.ctaHref}
                className={`w-full py-3.5 rounded-full font-semibold text-center transition-all shadow-sm ${
                  plan.featured
                     ? "bg-indigo-600 text-white hover:bg-indigo-700 hover:-translate-y-[1px]"
