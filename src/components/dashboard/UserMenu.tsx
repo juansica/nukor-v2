@@ -1,0 +1,54 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import { LogOut, ChevronDown } from 'lucide-react'
+import SignOutButton from '@/components/auth/SignOutButton'
+
+interface UserMenuProps {
+  userName: string
+  userEmail: string
+}
+
+export default function UserMenu({ userName, userEmail }: UserMenuProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const initials = userName.slice(0, 2).toUpperCase()
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 flex-shrink-0">
+          {initials}
+        </div>
+        <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">{userName}</span>
+        <ChevronDown size={14} className={`text-gray-400 transition-transform hidden sm:block ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-950 truncate">{userName}</p>
+            <p className="text-xs text-gray-400 truncate mt-0.5">{userEmail}</p>
+          </div>
+          <div className="p-1">
+            <div className="flex items-center gap-2.5 px-3 rounded-lg hover:bg-red-50 transition-colors">
+              <LogOut size={14} className="text-red-500 flex-shrink-0" />
+              <SignOutButton className="py-2 text-sm font-medium text-red-600 transition-colors text-left flex-1" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/dashboard/Sidebar'
+import UserMenu from '@/components/dashboard/UserMenu'
 import ReactMarkdown from 'react-markdown'
 import {
   Search,
@@ -546,6 +547,7 @@ function LibraryClient() {
             )}
             {areaId && !collectionId && <button onClick={() => setShowCollModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva colección</button>}
             {collectionId && <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"><Plus size={18} /> Nueva entrada</Link>}
+          <UserMenu userName={userName} userEmail={userEmail} />
           </div>
         </header>
 

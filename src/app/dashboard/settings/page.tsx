@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from '@/components/dashboard/Sidebar'
+import UserMenu from '@/components/dashboard/UserMenu'
 import IntegrationsTab from '@/components/settings/IntegrationsTab'
 import {
   Menu, Save, AlertTriangle, ChevronDown, ChevronRight,
@@ -337,7 +338,14 @@ function SettingsContent() {
         <div className="fixed inset-0 bg-black/20 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Top bar */}
+        <header className="flex-shrink-0 h-14 bg-white border-b border-gray-200 px-6 flex items-center justify-between">
+          <button className="md:hidden p-2 -ml-2 text-gray-400" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
+          <div className="flex-1" />
+          <UserMenu userName={userName} userEmail={userEmail} />
+        </header>
+        <div className="flex flex-1 overflow-hidden">
         {/* Settings sub-nav */}
         <aside className="hidden sm:flex flex-col w-52 bg-white border-r border-gray-200 flex-shrink-0">
           <div className="p-5 pb-3">
@@ -947,6 +955,7 @@ function SettingsContent() {
             )}
           </div>
         </main>
+      </div>
       </div>
 
       {/* Invite modal */}

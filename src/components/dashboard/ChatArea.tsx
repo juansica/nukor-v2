@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, Send, Menu, Sparkles, BookmarkPlus, Check, X, ArrowUp, Activity, FileText, FileSpreadsheet, File } from 'lucide-react'
+import UserMenu from '@/components/dashboard/UserMenu'
 import ReactMarkdown from 'react-markdown'
 import type { LogEntry, LogGroup } from '@/components/dashboard/DashboardClient'
 
@@ -55,6 +56,7 @@ interface ChatAreaProps {
   onClearLogs?: () => void
   onFileUpload?: (file: File) => Promise<void>
   isFileUploading?: boolean
+  userEmail?: string
 }
 
 const parseMessageContent = (content: string) => {
@@ -209,6 +211,7 @@ const ChatArea = ({
   onClearLogs,
   onFileUpload,
   isFileUploading = false,
+  userEmail = '',
 }: ChatAreaProps) => {
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -326,16 +329,19 @@ const ChatArea = ({
             </span>
           )}
         </div>
-        <button
-          onClick={handleToggleLogs}
-          className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          title="Ver actividad del asistente"
-        >
-          <Activity className="w-5 h-5 text-gray-500" />
-          {hasNewLogs && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 border-2 border-white rounded-full" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleToggleLogs}
+            className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            title="Ver actividad del asistente"
+          >
+            <Activity className="w-5 h-5 text-gray-500" />
+            {hasNewLogs && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 border-2 border-white rounded-full" />
+            )}
+          </button>
+          <UserMenu userName={userName} userEmail={userEmail} />
+        </div>
       </div>
 
       {/* Messages / Welcome */}

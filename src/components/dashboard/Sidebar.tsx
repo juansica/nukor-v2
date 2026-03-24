@@ -3,8 +3,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { IConversation } from '@/types/chat'
-import SignOutButton from '@/components/auth/SignOutButton'
-import { Plus, BookOpen, MessageSquare, Settings, ChevronDown, X, Check, LayoutDashboard } from 'lucide-react'
+import { Plus, BookOpen, MessageSquare, Settings, ChevronDown, X, Check, LayoutDashboard, History } from 'lucide-react'
 
 interface SidebarProps {
   activeConversationId: string | null
@@ -22,14 +21,11 @@ const Sidebar = ({
   activeConversationId,
   onSelectConversation,
   onNewConversation,
-  userName,
-  userEmail,
   workspaceName,
   onClose,
   onDeleteConversation,
   initialConversations,
 }: SidebarProps) => {
-  const initials = userName.slice(0, 2).toUpperCase()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -225,14 +221,17 @@ const Sidebar = ({
         </Link>
       </nav>
 
-      {/* HISTORIAL section label */}
-      <div className="px-6 flex-shrink-0">
+      {/* HISTORIAL toggle — styled like nav items */}
+      <div className="px-3 flex-shrink-0">
         <button
           onClick={() => setHistoryOpen(o => !o)}
-          className="flex items-center justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 hover:text-gray-600 transition-colors"
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border border-transparent ${
+            historyOpen ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-slate-50 hover:text-gray-900'
+          }`}
         >
-          Historial
-          <ChevronDown size={12} className={`transition-transform ${historyOpen ? 'rotate-180' : ''}`} />
+          <History size={18} className={historyOpen ? 'text-indigo-600' : 'text-gray-400'} />
+          <span className="flex-1 text-left">Historial</span>
+          <ChevronDown size={14} className={`transition-transform ${historyOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
@@ -303,19 +302,7 @@ const Sidebar = ({
         )}
       </div>
 
-      {/* User footer */}
-      <div className="flex-shrink-0 p-5 border-t border-gray-200 bg-white">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col items-start">
-            <p className="text-sm font-semibold truncate text-gray-950 tracking-tight">{userName}</p>
-            <p className="text-xs truncate text-gray-500 mb-1">{userEmail}</p>
-            <SignOutButton className="text-xs text-gray-500 hover:text-gray-900 transition-colors text-left font-medium underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900" />
-          </div>
-        </div>
-      </div>
+
 
       {/* Create workspace modal */}
       {showCreateModal && (

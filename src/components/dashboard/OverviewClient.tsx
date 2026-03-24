@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Sidebar from '@/components/dashboard/Sidebar'
+import UserMenu from '@/components/dashboard/UserMenu'
 import {
   MessageSquare,
   BookOpen,
@@ -184,16 +185,19 @@ export default function OverviewClient({
               <p className="text-xs text-gray-400 capitalize">{today}</p>
             </div>
           </div>
-          {systemRole === 'super_admin' && (
-            <button
-              onClick={fetchStats}
-              disabled={loading}
-              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-              title="Actualizar datos"
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {systemRole === 'super_admin' && (
+              <button
+                onClick={fetchStats}
+                disabled={loading}
+                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                title="Actualizar datos"
+              >
+                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+              </button>
+            )}
+            <UserMenu userName={userName} userEmail={userEmail} />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-8">

@@ -510,6 +510,7 @@ export default function DashboardClient({ userId, userName, userEmail, workspace
           onClearLogs={() => setLogGroups([])}
           onFileUpload={handleFileUpload}
           isFileUploading={isFileUploading}
+          userEmail={userEmail}
         />
       </div>
     </motion.div>
