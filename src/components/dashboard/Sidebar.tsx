@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { IConversation } from '@/types/chat'
-import { Plus, BookOpen, MessageSquare, Settings, ChevronDown, X, Check, LayoutDashboard, History } from 'lucide-react'
+import { Plus, BookOpen, MessageSquare, ChevronDown, X, Check, LayoutDashboard, History } from 'lucide-react'
 
 interface SidebarProps {
   activeConversationId: string | null
@@ -93,7 +93,6 @@ const Sidebar = ({
 
   const isChatActive = pathname === '/dashboard'
   const isLibraryActive = pathname.startsWith('/dashboard/library')
-  const isSettingsActive = pathname.startsWith('/dashboard/settings')
   const isOverviewActive = pathname.startsWith('/dashboard/overview')
 
   return (
@@ -204,22 +203,6 @@ const Sidebar = ({
         </Link>
       </nav>
 
-      {/* Nav — GESTIÓN */}
-      <nav className="px-3 pb-3 flex-shrink-0">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-1.5 mt-2">Gestión</p>
-        <Link
-          href="/dashboard/settings"
-          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors border border-transparent ${
-            isSettingsActive
-              ? 'bg-indigo-50 text-indigo-600'
-              : 'text-gray-500 hover:bg-slate-50 hover:text-gray-900'
-          }`}
-          onClick={onClose}
-        >
-          <Settings size={18} className={isSettingsActive ? 'text-indigo-600' : 'text-gray-400'} />
-          Configuración
-        </Link>
-      </nav>
 
       {/* HISTORIAL toggle — styled like nav items */}
       <div className="px-3 flex-shrink-0">

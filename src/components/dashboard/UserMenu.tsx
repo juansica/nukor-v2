@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { LogOut, ChevronDown } from 'lucide-react'
+import { LogOut, ChevronDown, Settings } from 'lucide-react'
+import Link from 'next/link'
 import SignOutButton from '@/components/auth/SignOutButton'
 
 interface UserMenuProps {
@@ -42,6 +43,14 @@ export default function UserMenu({ userName, userEmail }: UserMenuProps) {
             <p className="text-xs text-gray-400 truncate mt-0.5">{userEmail}</p>
           </div>
           <div className="p-1">
+            <Link
+              href="/dashboard/settings"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Settings size={14} className="text-gray-400 flex-shrink-0" />
+              Configuración
+            </Link>
             <div className="flex items-center gap-2.5 px-3 rounded-lg hover:bg-red-50 transition-colors">
               <LogOut size={14} className="text-red-500 flex-shrink-0" />
               <SignOutButton className="py-2 text-sm font-medium text-red-600 transition-colors text-left flex-1" />
