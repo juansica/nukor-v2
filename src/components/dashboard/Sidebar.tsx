@@ -34,6 +34,7 @@ const Sidebar = ({
   const router = useRouter()
 
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newWorkspaceName, setNewWorkspaceName] = useState('')
   const workspaceRef = useRef<HTMLDivElement>(null)
@@ -226,11 +227,17 @@ const Sidebar = ({
 
       {/* HISTORIAL section label */}
       <div className="px-6 flex-shrink-0">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Historial</p>
+        <button
+          onClick={() => setHistoryOpen(o => !o)}
+          className="flex items-center justify-between w-full text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 hover:text-gray-600 transition-colors"
+        >
+          Historial
+          <ChevronDown size={12} className={`transition-transform ${historyOpen ? 'rotate-180' : ''}`} />
+        </button>
       </div>
 
       {/* Conversations grouped by date */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+      <div className={`overflow-y-auto px-4 pb-4 space-y-4 transition-all ${historyOpen ? 'flex-1' : 'hidden'}`}>
         {conversations.length === 0 ? (
           <p className="text-xs px-2 py-2 leading-relaxed text-gray-400">
             Tus conversaciones aparecerán aquí
