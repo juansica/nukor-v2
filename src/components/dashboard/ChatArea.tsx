@@ -15,7 +15,7 @@ import UserMenu from '@/components/dashboard/UserMenu'
 import ReactMarkdown from 'react-markdown'
 import type { LogEntry, LogGroup } from '@/components/dashboard/DashboardClient'
 
-const SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   '¿Cuál es nuestro proceso de onboarding?',
   '¿Cómo manejamos las devoluciones?',
   '¿Cuáles son nuestras políticas de vacaciones?',
@@ -224,6 +224,16 @@ const ChatArea = ({
   const [hasNewLogs, setHasNewLogs] = useState(false)
   const prevEventsCountRef = useRef(0)
 
+  const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS)
+
+  useEffect(() => {
+    if (!workspaceId) return
+    fetch(`/api/suggestions?workspace_id=${workspaceId}`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.suggestions) && d.suggestions.length) setSuggestions(d.suggestions) })
+      .catch(() => {})
+  }, [workspaceId])
+
   // Use flat count of events to detect new logs
   useEffect(() => {
     const currentCount = logGroups?.reduce((acc, g) => acc + g.steps.length, 0) || 0
@@ -358,7 +368,7 @@ const ChatArea = ({
               ¿Qué quieres saber hoy?
             </p>
             <div className="grid sm:grid-cols-3 gap-4 w-full max-w-[720px]">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => onSendMessage(s)}
