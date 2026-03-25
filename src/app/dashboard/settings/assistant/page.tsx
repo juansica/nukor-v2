@@ -585,7 +585,7 @@ function AssistantSettingsContent() {
                       <div>
                         <p className="text-sm font-bold text-gray-950">Miembros registrados</p>
                         {currentPlan === 'pro' && (
-                          <p className="text-xs text-gray-400 mt-0.5">{phoneMembers.length} / 50</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{phoneMembers.length} / 25</p>
                         )}
                       </div>
                       <button

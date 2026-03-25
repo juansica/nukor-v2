@@ -53,7 +53,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     maxIntegrations: 5,
     aiDailyLimit: false,
     whatsappEnabled: true,
-    maxPhoneMembers: 50,
+    maxPhoneMembers: 25,
     apiAccess: false,
     prioritySupport: true,
     customOnboarding: false,
