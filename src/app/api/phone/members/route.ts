@@ -68,10 +68,10 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Solo los admins pueden agregar miembros de WhatsApp' }, { status: 403 })
     }
 
-    // Check plan allows WhatsApp
+    // Fetch workspace (plan + name in one query)
     const { data: ws } = await supabaseAdmin
       .from('workspaces')
-      .select('plan')
+      .select('plan, name')
       .eq('id', workspace_id)
       .maybeSingle()
     if (!canUseFeature(ws?.plan, 'whatsappEnabled')) {
@@ -115,12 +115,6 @@ export async function POST(request: Request) {
 
     if (error) return Response.json({ error: error.message }, { status: 500 })
 
-    // Fetch workspace name
-    const { data: ws } = await supabaseAdmin
-      .from('workspaces')
-      .select('name')
-      .eq('id', workspace_id)
-      .maybeSingle()
     const wsName = ws?.name ?? 'tu empresa'
 
     // Send activation WhatsApp message
