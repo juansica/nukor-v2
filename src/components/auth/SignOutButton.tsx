@@ -17,7 +17,7 @@ const SignOutButton = ({ className }: SignOutButtonProps) => {
     setLoading(true)
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/')
+    router.push('/sign-in')
   }
 
   return (
