@@ -506,6 +506,22 @@ const ChatArea = ({
               )
             })}
 
+            {/* Thinking / typing indicator */}
+            {isTyping && (
+              <div className="max-w-[760px] mx-auto w-full">
+                {thinkingSteps.length > 0 ? (
+                  <div className="flex items-end gap-3 px-4 mt-2">
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-black flex-shrink-0 bg-indigo-600 text-white shadow-sm self-start mt-1">
+                      N
+                    </div>
+                    <ThinkingLog steps={thinkingSteps} />
+                  </div>
+                ) : (
+                  <TypingIndicator />
+                )}
+              </div>
+            )}
+
               <div ref={messagesEndRef} className="h-8" />
           </div>
         )}
